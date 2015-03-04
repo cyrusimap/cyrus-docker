@@ -4,16 +4,34 @@ git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-im
 
 # Note: Possibly available variables from Phabricator:
 # 
-# build.id
+# build.id              - use this for the container name,
+#                         and for providing feedback
 # buildable.commit      - we call this ${COMMIT}
 # buildable.diff
 # buildable.revision    - we call this ${DIFFERENTIAL}
-# repository.callsign
+# repository.callsign   - use this to query the commit
 # repository.uri
 # repository.vcs
 # step.timestamp
 # target.phid           - we call this ${PHID} (?)
+#                         tends to be a harbormaster id
 # 
+
+export PATH=$PATH:/srv/arcanist/bin
+
+function commit_raise_concern() {
+    message=$1
+
+    if [ ! -z "$2" ]; then
+        commit=$2
+    else
+        commit=${COMMIT}
+    fi
+
+    phid=$(echo "{\"commits\":[\"rI${commit}\"]}" | arc call-conduit diffusion.getcommits | awk -v RS=',' -v FS=':' '$1~/\"commitPHID\"/ {print $2}' | tr -d \")
+
+    echo "{\"phid\":\"${phid}\",\"message\":\"${message}\",\"action\":\"concern\"}" | arc call-conduit diffusion.createcomment
+}
 
 # Note, since all this builds from GIT, --enable-maintainer-mode
 # is required
@@ -75,6 +93,8 @@ if [ -z "${DIFFERENTIAL}" ]; then
 
     fi
 
+    commit_raise_concern "This is a test concern" "$(git rev-parse HEAD)"
+
     ./configure ${configure_opts}
 
     make lex-fix || (make sieve/addr-lex.c sieve/sieve-lex.c && sed -r -i -e 's/int yyl;/yy_size_t yyl;/' -e 's/\tint i;/\tyy_size_t i;/' sieve/addr-lex.c sieve/sieve-lex.c)
@@ -97,7 +117,7 @@ elif [ ! -z "${DIFFERENTIAL}" ]; then
 
     # Apply the differential patch
     if [ -z "${PHABRICATORCERT}" ]; then
-        wget -q -O- "https://git.cyrus.foundation/${DIFFERENTIAL}?download=true" | patch -p1 || exit 1
+        wget -q -O- "https://git.cyrus.foundation/D${DIFFERENTIAL}?download=true" | patch -p1 || exit 1
     else
         arc patch --nobranch --nocommit --revision ${DIFFERENTIAL}
     fi
