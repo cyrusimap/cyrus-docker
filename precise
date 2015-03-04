@@ -1,6 +1,7 @@
 FROM ubuntu:precise
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
 RUN apt-get update
+RUN apt-get -y upgrade
 RUN apt-get -y install \
     autoconf \
     automake \
@@ -11,18 +12,21 @@ RUN apt-get -y install \
     debhelper \
     flex \
     git \
+    gperf \
     groff \
     heimdal-dev \
     libdb-dev \
+    libical-dev \
     libjansson-dev \
     libldap2-dev \
     libpam0g-dev \
     libpcre3-dev \
     libsasl2-dev \
     libsnmp-dev \
+    libsqlite3-dev \
     libssl-dev \
     libtool \
-    libxml2 \
+    libxml2-dev \
     libwrap0-dev \
     libzephyr-dev \
     lsb-base \

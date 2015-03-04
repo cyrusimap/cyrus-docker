@@ -1,4 +1,4 @@
-FROM ubuntu:trusty
+FROM debian:jessie
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
 RUN apt-get update
 RUN apt-get -y upgrade

@@ -23,5 +23,19 @@ Check out a specific commit:
 
 Do both:
 
-  $ docker run -e "DIFFERENTIAL=9" -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.santiago
+  $ docker run -e "DIFFERENTIAL=9" -e "COMMIT=<id>" \
+        -t -i cyrus-imapd-3.0.santiago
 
+This could be:
+
+  $ docker run -e "COMMIT=cyrus-imapd-2.5" \
+        -t -i cyrus-imapd-3.0.santiago
+
+And could be run interactively:
+
+  $ docker run -e "COMMIT=cyrus-imapd-2.5" \
+        -t -i --entrypoint="/bin/bash" cyrus-imapd-3.0.santiago -s
+
+Or, why even do them one by one?
+
+  $ make all run

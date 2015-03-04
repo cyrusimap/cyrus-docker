@@ -1,43 +1,41 @@
-FROM ubuntu:trusty
+FROM fedora:21
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
-RUN apt-get update
-RUN apt-get -y upgrade
-RUN apt-get -y install \
-    autoconf \
+RUN yum clean all
+RUN yum -y update
+RUN yum -y install \
     automake \
-    autotools-dev \
+    autoconf \
     bison \
-    build-essential \
-    comerr-dev \
-    debhelper \
+    CUnit-devel \
+    cyrus-sasl-devel \
+    cyrus-sasl-plain \
+    cyrus-sasl-md5 \
+    db4-devel \
     flex \
+    gcc \
     git \
+    glib2-devel \
     gperf \
     groff \
-    heimdal-dev \
-    libdb-dev \
-    libical-dev \
-    libjansson-dev \
-    libldap2-dev \
-    libpam0g-dev \
-    libpcre3-dev \
-    libsasl2-dev \
-    libsnmp-dev \
-    libsqlite3-dev \
-    libssl-dev \
+    jansson-devel \
+    krb5-devel \
+    libical-devel \
     libtool \
-    libxml2-dev \
-    libwrap0-dev \
-    libzephyr-dev \
-    lsb-base \
-    perl \
-    pkg-config \
-    po-debconf \
-    tcl-dev \
-    transfig \
-    vim \
-    xutils-dev \
-    zlib1g-dev
+    libuuid-devel \
+    libxml2-devel \
+    mysql-devel \
+    net-snmp-devel \
+    openldap-devel \
+    openssl-devel \
+    patch \
+    perl-devel \
+    php-cli \
+    postgresql-devel \
+    sqlite-devel \
+    tcp_wrappers \
+    valgrind-devel \
+    vim-enhanced \
+    wget
 
 WORKDIR /root
 RUN echo "export PATH=\$PATH:/srv/arcanist/bin/" >> .bashrc
