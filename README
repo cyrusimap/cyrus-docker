@@ -1,0 +1,25 @@
+Docker Images for Cyrus IMAP
+============================
+
+NOTE: The image will build against master by default.
+
+Build it:
+
+  $ docker build -t cyrus-imapd-3.0.el6 el6/
+
+Run it:
+
+  $ docker run -t -i cyrus-imapd-3.0.el6
+
+Apply a differential to the build:
+
+  $ docker run -e "DIFFERENTIAL=D9" -t -i cyrus-imapd-3.0.el6
+
+Check out a specific commit:
+
+  $ docker run -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.el6
+
+Do both:
+
+  $ docker run -e "DIFFERENTIAL=D9" -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.el6
+
