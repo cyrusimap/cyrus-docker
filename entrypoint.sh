@@ -1,7 +1,15 @@
 #!/bin/bash
 
-git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
-git config --global http.sslverify false ; git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git )
+if [ ! -d /srv/cyrus-imapd.git ]; then
+    git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
+            git config --global http.sslverify false
+            git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git
+        )
+else
+    cd /srv/cyrus-imapd.git
+    git remote set-url origin https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
+    git fetch origin
+fi
 
 # Note: Possibly available variables from Phabricator:
 # 
