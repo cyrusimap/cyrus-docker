@@ -1,6 +1,7 @@
 #!/bin/bash
 
-git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || exit 1
+git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
+git config --global http.sslverify false ; git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git )
 
 # Note: Possibly available variables from Phabricator:
 # 
