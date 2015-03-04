@@ -22,6 +22,7 @@ RUN apt-get -y install \
     libsnmp-dev \
     libssl-dev \
     libtool \
+    libxml2 \
     libwrap0-dev \
     libzephyr-dev \
     lsb-base \
