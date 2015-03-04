@@ -1,0 +1,55 @@
+FROM centos:centos6
+MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+RUN yum -y install epel-release
+RUN yum clean all
+RUN yum -y update
+RUN yum -y install \
+    automake \
+    autoconf \
+    bison \
+    CUnit-devel \
+    cyrus-sasl-devel \
+    cyrus-sasl-plain \
+    cyrus-sasl-md5 \
+    db4-devel \
+    flex \
+    gcc \
+    git \
+    glib2-devel \
+    gperf \
+    groff \
+    jansson-devel \
+    krb5-devel \
+    libical-devel \
+    libtool \
+    libuuid-devel \
+    libxml2-devel \
+    mysql-devel \
+    net-snmp-devel \
+    openldap-devel \
+    openssl-devel \
+    patch \
+    perl-devel \
+    php-cli \
+    postgresql-devel \
+    sqlite-devel \
+    tcp_wrappers \
+    valgrind-devel \
+    vim-enhanced \
+    wget
+
+#WORKDIR /srv
+#RUN git clone https://github.com/phacility/libphutil.git
+#RUN git clone https://github.com/phacility/arcanist.git
+
+WORKDIR /root
+RUN echo "export PATH=\$PATH:/srv/arcanist/bin/" >> .bashrc
+RUN echo "set shiftwidth=4" >> .vimrc
+RUN echo "set tabstop=4" >> .vimrc
+RUN echo "set expandtab" >> .vimrc
+RUN echo "autocmd BufNewFile,BufRead /srv/cyrus-imapd.git/*/*.{c,h} set tabstop=8 softtabstop=4 shiftwidth=4 list listchars=tab:>. noexpandtab" >> .vimrc
+
+WORKDIR /
+ADD ../entrypoint.sh /
+RUN chmod 755 /entrypoint.sh
+ENTRYPOINT [ "/entrypoint.sh" ]
