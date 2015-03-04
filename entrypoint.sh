@@ -19,13 +19,17 @@ git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-im
 
 export PATH=$PATH:/srv/arcanist/bin
 
-function commit_raise_concern() {
+function commit_raise_concern {
     message=$1
 
     if [ ! -z "$2" ]; then
         commit=$2
     else
         commit=${COMMIT}
+    fi
+
+    if [ -z "$(which arc 2>/dev/null)" ]; then
+        return
     fi
 
     phid=$(echo "{\"commits\":[\"rI${commit}\"]}" | arc call-conduit diffusion.getcommits | awk -v RS=',' -v FS=':' '$1~/\"commitPHID\"/ {print $2}' | tr -d \")
@@ -92,8 +96,6 @@ if [ -z "${DIFFERENTIAL}" ]; then
         fi
 
     fi
-
-    commit_raise_concern "This is a test concern" "$(git rev-parse HEAD)"
 
     ./configure ${configure_opts}
 
