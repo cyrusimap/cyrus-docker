@@ -38,10 +38,6 @@ RUN yum -y install \
     vim-enhanced \
     wget
 
-#WORKDIR /srv
-#RUN git clone https://github.com/phacility/libphutil.git
-#RUN git clone https://github.com/phacility/arcanist.git
-
 WORKDIR /root
 RUN echo "export PATH=\$PATH:/srv/arcanist/bin/" >> .bashrc
 RUN echo "set shiftwidth=4" >> .vimrc
@@ -50,6 +46,6 @@ RUN echo "set expandtab" >> .vimrc
 RUN echo "autocmd BufNewFile,BufRead /srv/cyrus-imapd.git/*/*.{c,h} set tabstop=8 softtabstop=4 shiftwidth=4 list listchars=tab:>. noexpandtab" >> .vimrc
 
 WORKDIR /
-ADD ../entrypoint.sh /
+ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]

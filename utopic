@@ -1,0 +1,47 @@
+FROM ubuntu:utopic
+MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+RUN apt-get update
+RUN apt-get -y install \
+    autoconf \
+    automake \
+    autotools-dev \
+    bison \
+    build-essential \
+    comerr-dev \
+    debhelper \
+    flex \
+    git \
+    groff \
+    heimdal-dev \
+    libdb-dev \
+    libjansson-dev \
+    libldap2-dev \
+    libpam0g-dev \
+    libpcre3-dev \
+    libsasl2-dev \
+    libsnmp-dev \
+    libssl-dev \
+    libtool \
+    libwrap0-dev \
+    libzephyr-dev \
+    lsb-base \
+    perl \
+    pkg-config \
+    po-debconf \
+    tcl-dev \
+    transfig \
+    vim \
+    xutils-dev \
+    zlib1g-dev
+
+WORKDIR /root
+RUN echo "export PATH=\$PATH:/srv/arcanist/bin/" >> .bashrc
+RUN echo "set shiftwidth=4" >> .vimrc
+RUN echo "set tabstop=4" >> .vimrc
+RUN echo "set expandtab" >> .vimrc
+RUN echo "autocmd BufNewFile,BufRead /srv/cyrus-imapd.git/*/*.{c,h} set tabstop=8 softtabstop=4 shiftwidth=4 list listchars=tab:>. noexpandtab" >> .vimrc
+
+WORKDIR /
+ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
+RUN chmod 755 /entrypoint.sh
+ENTRYPOINT [ "/entrypoint.sh" ]
