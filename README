@@ -5,23 +5,23 @@ NOTE: The image will build against master by default.
 
 Build it:
 
-  $ docker build -t cyrus-imapd-3.0.el6 el6/
+  $ docker build -t cyrus-imapd-3.0.santiago - < santiago
 
 Run it:
 
-  $ docker run -t -i cyrus-imapd-3.0.el6
+  $ docker run -t -i cyrus-imapd-3.0.santiago
 
 Apply a differential to the build:
 
-  $ docker run -e "DIFFERENTIAL=9" -t -i cyrus-imapd-3.0.el6
+  $ docker run -e "DIFFERENTIAL=9" -t -i cyrus-imapd-3.0.santiago
 
 IMPORTANT: Only use the **number**
 
 Check out a specific commit:
 
-  $ docker run -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.el6
+  $ docker run -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.santiago
 
 Do both:
 
-  $ docker run -e "DIFFERENTIAL=9" -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.el6
+  $ docker run -e "DIFFERENTIAL=9" -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.santiago
 
