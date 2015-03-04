@@ -13,7 +13,9 @@ Run it:
 
 Apply a differential to the build:
 
-  $ docker run -e "DIFFERENTIAL=D9" -t -i cyrus-imapd-3.0.el6
+  $ docker run -e "DIFFERENTIAL=9" -t -i cyrus-imapd-3.0.el6
+
+IMPORTANT: Only use the **number**
 
 Check out a specific commit:
 
@@ -21,5 +23,5 @@ Check out a specific commit:
 
 Do both:
 
-  $ docker run -e "DIFFERENTIAL=D9" -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.el6
+  $ docker run -e "DIFFERENTIAL=9" -e "COMMIT=<id>" -t -i cyrus-imapd-3.0.el6
 

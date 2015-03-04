@@ -50,6 +50,6 @@ RUN echo "set expandtab" >> .vimrc
 RUN echo "autocmd BufNewFile,BufRead /srv/cyrus-imapd.git/*/*.{c,h} set tabstop=8 softtabstop=4 shiftwidth=4 list listchars=tab:>. noexpandtab" >> .vimrc
 
 WORKDIR /
-ADD ../entrypoint.sh /
+ADD entrypoint.sh /
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]
