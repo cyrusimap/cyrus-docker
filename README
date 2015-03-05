@@ -39,3 +39,24 @@ And could be run interactively:
 Or, why even do them one by one?
 
   $ make all run
+
+Phabricator Integration
+=======================
+
+Your Phabricator certificate:
+
+  https://git.cyrus.foundation/settings/panel/conduit/
+
+If you remember your Phabricator username:
+
+  $ docker run -e "PHAB_CERT=abcdef" -e "PHAB_USER=kangaroo" \
+    -t -i --entrypoint="/bin/bash" cyrus-imapd-3.0.santiago -s
+
+This will give you `arc` in the container.
+
+Why so exotic?
+==============
+
+IMPORTANT:  A directory structure would have meant needing to copy off
+            `entrypoint.sh` multiple times as **Docker** will not take a
+            symbolic link.

@@ -12,7 +12,7 @@ else
 fi
 
 # Note: Possibly available variables from Phabricator:
-# 
+#
 # build.id              - use this for the container name,
 #                         and for providing feedback
 # buildable.commit      - we call this ${COMMIT}
@@ -24,7 +24,7 @@ fi
 # step.timestamp
 # target.phid           - we call this ${PHID} (?)
 #                         tends to be a harbormaster id
-# 
+#
 
 export PATH=$PATH:/srv/arcanist/bin
 
@@ -56,10 +56,14 @@ else
     do_preconfig=0
 fi
 
-if [ ! -z "${PHABRICATORCERT}" ]; then
+if [ ! -z "${PHAB_CERT}" ]; then
     cd /srv
     git clone https://github.com/phacility/libphutil.git
     git clone https://github.com/phacility/arcanist.git
+
+    if [ -z "${PHAB_USER}" ]; then
+        PHAB_USER="jenkins"
+    fi
 
     cat >> /root/.arcrc << EOF
 {
@@ -68,8 +72,8 @@ if [ ! -z "${PHABRICATORCERT}" ]; then
   },
   "hosts": {
     "https:\/\/git.cyrus.foundation\/api\/": {
-      "user": "jenkins",
-      "cert": "${PHABRICATORCERT}"
+      "user": "${PHAB_USER}",
+      "cert": "${PHAB_CERT}"
     }
   }
 }
@@ -87,7 +91,7 @@ if [ -z "${DIFFERENTIAL}" ]; then
     if [ ! -z "${COMMIT}" ]; then
         git checkout -f ${COMMIT}
     fi
-    
+
     autoreconf -vi || (libtoolize && autoreconf -vi)
 
     if [ ${do_preconfig} -eq 1 ]; then
@@ -127,7 +131,7 @@ elif [ ! -z "${DIFFERENTIAL}" ]; then
     fi
 
     # Apply the differential patch
-    if [ -z "${PHABRICATORCERT}" ]; then
+    if [ -z "${PHAB_CERT}" ]; then
         wget -q -O- "https://git.cyrus.foundation/D${DIFFERENTIAL}?download=true" | patch -p1 || exit 1
     else
         arc patch --nobranch --nocommit --revision ${DIFFERENTIAL}
