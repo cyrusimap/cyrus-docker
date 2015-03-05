@@ -279,13 +279,13 @@ function _make {
         retval=$(_shell make clean)
 
         # Re-configure, no exit code checking, we've already run this.
-        retval=$(shell _configure_maintainer)
+        retval=$(_shell _configure_maintainer)
 
         # Re-configure, no exit code checking, we've already run this.
-        retval=$(shell _configure)
+        retval=$(_shell _configure)
 
         # Now for the interesting part
-        retval=$(shell make)
+        retval=$(_shell make)
 
         if [ ${retval} -eq 0 ]; then
             # Both makes successful
