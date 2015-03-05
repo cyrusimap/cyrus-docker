@@ -38,7 +38,8 @@ RUN apt-get update && apt-get -y install \
     zlib1g-dev
 
 WORKDIR /srv
-RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+RUN git config --global http.sslverify false && \
+    git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
     cyrus-imapd.git
 
 WORKDIR /root
