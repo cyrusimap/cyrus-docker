@@ -56,7 +56,7 @@ function commit_comment {
     done
 
     message=$(
-            echo "Step **${step}** succeeded on $(cat /etc/system-release)"
+            echo "Step **${step}** succeeded on $(os_version)"
         )
 
     if [ -z "$(which arc 2>/dev/null)" ]; then
@@ -87,12 +87,12 @@ function commit_raise_concern {
     docs_base_url="https://docs.cyrus.foundation/imap/developer/"
 
     message=$(
-            echo -n "This commit **failed step ${step}** on $(cat /etc/system-release)."
-            echo -n '\r\n'
+            echo -n "This commit **failed step ${step}** on $(os_version)."
+            echo -n '\r\n\r\n'
             echo -n "NOTE: See ${docs_base_url}/${step}-fails.html for details."
-            echo -n '\r\n'
+            echo -n '\r\n\r\n'
             echo -n "Additional information:"
-            echo -n '\r\n'
+            echo -n '\r\n\r\n'
             if [ ${severity} -eq 1 ]; then
                 echo -n "  * The parent commit rI${parent_commit} also failed this step, so you're OK."
             elif [ ${severity} -eq 2 ]; then
@@ -122,6 +122,17 @@ function commit_thumbs_up {
 
 function differential_raise_concern {
     echo "Would have raised a concern"
+}
+
+function os_version {
+    if [ -f "/etc/lsb-release" ]; then
+        . /etc/lsb-release
+        echo "${DISTRIB_ID} ${DISTRIB_RELEASE} (${DISTRIB_CODENAME})"
+    elif [ -f "/etc/debian_version" ]; then
+        echo "Debian $(cat /etc/debian_version)"
+    elif [ -f "/etc/system-release" ]; then
+        cat /etc/system-release
+    fi
 }
 
 # A simple routine that runs:
@@ -450,7 +461,12 @@ if [ -z "${DIFFERENTIAL}" ]; then
         commit_raise_concern --step "make-lex-fix" --severity $?
 
     # Make twice, one also re-configures with CFLAGS
-    _make && commit_comment --step "make" || commit_raise_concern --step "make" --severity $?
+    _make && commit_comment --step "make" ; retval=$?
+
+    if [ ${retval} -ne 0 ]; then
+        commit_raise_concern --step "make" --severity ${retval}
+        exit 1
+    fi
 
     _make_check && commit_comment --step "make-check" || commit_raise_concern --step "make-check" --severity $?
 
