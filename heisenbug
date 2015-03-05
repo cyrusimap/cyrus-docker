@@ -36,8 +36,12 @@ RUN yum clean all && yum -y install \
     vim-enhanced \
     wget
 
+WORKDIR /srv
+RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+    cyrus-imapd.git
+
 WORKDIR /root
-RUN echo "export PATH=\$PATH:/srv/arcanist/bin/" >> .bashrc
+ENV PATH /srv/arcanist/bin/:$PATH
 ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
 
 WORKDIR /
