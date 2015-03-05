@@ -8,8 +8,13 @@ run:
 		docker run -t -i --rm=true cyrusimapd/$$dist ; \
 	done
 
-list:
+push:
 	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
+		docker push cyrusimapd/$$dist ; \
+	done
+
+list:
+	@for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
 		echo $$dist ; \
 	done
 
