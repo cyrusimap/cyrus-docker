@@ -87,18 +87,18 @@ function commit_raise_concern {
     docs_base_url="https://docs.cyrus.foundation/imap/developer/"
 
     message=$(
-            echo "This commit **failed step ${step}** on $(cat /etc/system-release)."
-            echo ""
-            echo "NOTE: See ${docs_base_url}/${step}-fails.html for details."
-            echo ""
-            echo "Additional information:"
-            echo ""
+            echo -n "This commit **failed step ${step}** on $(cat /etc/system-release)."
+            echo -n '\r\n'
+            echo -n "NOTE: See ${docs_base_url}/${step}-fails.html for details."
+            echo -n '\r\n'
+            echo -n "Additional information:"
+            echo -n '\r\n'
             if [ ${severity} -eq 1 ]; then
-                echo "  * The parent commit rI${parent_commit} also failed this step, so you're OK."
+                echo -n "  * The parent commit rI${parent_commit} also failed this step, so you're OK."
             elif [ ${severity} -eq 2 ]; then
-                echo "  * The parent commit rI${parent_commit} **did not fail** this step. Presumably, this is all your fault (or mine)."
+                echo -n "  * The parent commit rI${parent_commit} **did not fail** this step. Presumably, this is all your fault (or mine)."
             elif [ ${severity} -eq 3 ]; then
-                echo "  * I did not check a parent commit, the return code applies to a //relaxed// build failing. This must be fixed."
+                echo -n "  * I did not check a parent commit, the return code applies to a //relaxed// build failing. This must be fixed."
             fi
         )
 
@@ -267,7 +267,7 @@ function _configure_maintainer {
 #
 function _make {
     # First, compile without extra CFLAGS. This tells us the difference.
-    unset CFLAGS
+    export CFLAGS=""
 
     retval=$(_shell make)
 
