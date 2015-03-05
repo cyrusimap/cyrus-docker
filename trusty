@@ -29,6 +29,8 @@ RUN apt-get update && apt-get -y install \
     libzephyr-dev \
     lsb-base \
     perl \
+    php5-cli \
+    php5-curl \
     pkg-config \
     po-debconf \
     tcl-dev \
