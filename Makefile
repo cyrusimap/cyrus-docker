@@ -3,7 +3,12 @@ all:
 		docker build -t cyrusimapd/$$dist - < $$dist ; \
 	done
 
-run:
+pull:
+	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
+		docker pull cyrusimapd/$$dist ; \
+	done
+
+run: pull
 	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
 		docker run -t -i --rm=true cyrusimapd/$$dist ; \
 	done
