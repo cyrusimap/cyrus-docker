@@ -41,10 +41,7 @@ RUN yum -y install \
 
 WORKDIR /root
 RUN echo "export PATH=\$PATH:/srv/arcanist/bin/" >> .bashrc
-RUN echo "set shiftwidth=4" >> .vimrc
-RUN echo "set tabstop=4" >> .vimrc
-RUN echo "set expandtab" >> .vimrc
-RUN echo "autocmd BufNewFile,BufRead /srv/cyrus-imapd.git/*/*.{c,h} set tabstop=8 softtabstop=4 shiftwidth=4 list listchars=tab:>. noexpandtab" >> .vimrc
+ADD .vimrc /root/.vimrc
 
 WORKDIR /
 ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
