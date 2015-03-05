@@ -10,6 +10,7 @@ RUN yum -y install \
     cyrus-sasl-devel \
     cyrus-sasl-plain \
     cyrus-sasl-md5 \
+    file \
     flex \
     gcc \
     git \
