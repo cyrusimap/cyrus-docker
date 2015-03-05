@@ -352,9 +352,9 @@ function _make_check {
 
             # The parent commit did not fail make check
             if [ ${retval} -eq 0 ]; then
-                return 1
-            else
                 return 2
+            else
+                return 1
             fi
         else
             # Return failure for parent commit
