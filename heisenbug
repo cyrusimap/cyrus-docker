@@ -37,7 +37,7 @@ RUN yum clean all && yum -y install \
 
 WORKDIR /root
 RUN echo "export PATH=\$PATH:/srv/arcanist/bin/" >> .bashrc
-ADD .vimrc /root/.vimrc
+ADD vimrc /root/.vimrc
 
 WORKDIR /
 ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
