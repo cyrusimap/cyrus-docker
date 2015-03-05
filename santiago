@@ -25,6 +25,7 @@ RUN yum -y install \
     libtool \
     libuuid-devel \
     libxml2-devel \
+    make \
     mysql-devel \
     net-snmp-devel \
     openldap-devel \

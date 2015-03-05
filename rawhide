@@ -10,7 +10,6 @@ RUN yum -y install \
     cyrus-sasl-devel \
     cyrus-sasl-plain \
     cyrus-sasl-md5 \
-    db4-devel \
     flex \
     gcc \
     git \
@@ -19,10 +18,12 @@ RUN yum -y install \
     groff \
     jansson-devel \
     krb5-devel \
+    libdb-devel \
     libical-devel \
     libtool \
     libuuid-devel \
     libxml2-devel \
+    make \
     mysql-devel \
     net-snmp-devel \
     openldap-devel \
