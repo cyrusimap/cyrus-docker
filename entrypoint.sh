@@ -264,6 +264,10 @@ function _configure_maintainer {
         fi
     fi
 
+    make \
+        imap/rfc822_header.c \
+        imap/rfc822_header.h || return 1
+
     return 0
 }
 
