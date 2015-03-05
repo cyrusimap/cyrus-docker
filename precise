@@ -1,8 +1,6 @@
 FROM ubuntu:precise
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
-RUN apt-get update
-RUN apt-get -y upgrade
-RUN apt-get -y install \
+RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
     autotools-dev \

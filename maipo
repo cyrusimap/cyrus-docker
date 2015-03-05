@@ -2,7 +2,6 @@ FROM centos:centos7
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
 RUN yum -y install epel-release
 RUN yum clean all
-RUN yum -y update
 RUN yum -y install \
     automake \
     autoconf \
