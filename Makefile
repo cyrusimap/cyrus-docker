@@ -10,7 +10,7 @@ pull:
 
 run:
 	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
-		docker run -t -i --rm=true cyrusimapd/$$dist 2>&1 | tee $$dist.log; \
+		docker run -t -i -e "PHAB_CERT=$(PHAB_CERT)" --rm=true cyrusimapd/$$dist 2>&1 | tee $$dist.log; \
 	done
 
 push:
