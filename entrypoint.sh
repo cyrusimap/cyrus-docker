@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Fedora 21 does not invoke /etc/bashrc, thus giving you a weird PS1
+if [ ! -z "$PS1" ]; then
+    . /etc/bashrc
+fi
+
 if [ ! -d /srv/cyrus-imapd.git ]; then
     git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
             git config --global http.sslverify false
