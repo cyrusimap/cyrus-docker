@@ -407,14 +407,17 @@ else
 fi
 
 if [ ! -z "${PHAB_CERT}" ]; then
-    cd /srv
 
-    if [ ! -d libphutil ]; then
-        git clone https://github.com/phacility/libphutil.git
-    fi
+    if [ -z "$(which arc)" ]; then
+        cd /srv
 
-    if [ ! -d arcanist ]; then
-        git clone https://github.com/phacility/arcanist.git
+        if [ ! -d libphutil ]; then
+            git clone https://github.com/phacility/libphutil.git
+        fi
+
+        if [ ! -d arcanist ]; then
+            git clone https://github.com/phacility/arcanist.git
+        fi
     fi
 
     if [ -z "${PHAB_USER}" ]; then
