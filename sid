@@ -38,6 +38,7 @@ RUN apt-get update && apt-get -y install \
     tcl-dev \
     transfig \
     vim \
+    wget \
     xutils-dev \
     zlib1g-dev
 
