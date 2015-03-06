@@ -17,6 +17,7 @@ RUN apt-get update && apt-get -y install \
     groff \
     heimdal-dev \
     libdb-dev \
+    libglib2.0-dev \
     libical-dev \
     libjansson-dev \
     libldap2-dev \
