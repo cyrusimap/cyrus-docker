@@ -147,9 +147,8 @@ function _configure {
 
     retval1=$(_shell autoreconf -vi)
 
-    local _configure_options_real=$(_configure_options ${configure_opts})
-
     if [ ${retval1} -eq 0 ]; then
+        local _configure_options_real=$(_configure_options ${configure_opts})
         retval4=$(_shell ./configure ${_configure_options_real})
 
     # Older platforms, older autoconf, older libtool
@@ -159,7 +158,8 @@ function _configure {
         if [ ${retval2} -eq 0 ]; then
             retval3=$(_shell autoreconf -vi)
 
-            if [ ${retval3} -ne 0 ]; then
+            if [ ${retval3} -eq 0 ]; then
+                local _configure_options_real=$(_configure_options ${configure_opts})
                 retval4=$(./configure ${configure_opts})
             else
                 if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
