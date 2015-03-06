@@ -30,6 +30,16 @@ dnopts[${#dnopts[@]}]="santiago"  ;   nopts[${#nopts[@]}]="--enable-http"
 dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-event-notification"
 dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-http"
 
+function apply-differential {
+    # Apply the differential patch
+    if [ -z "${PHAB_CERT}" ]; then
+        wget --no-check-certificate -q -O- \
+            "https://git.cyrus.foundation/D${1}?download=true" | patch -p1 || exit 1
+    else
+        arc patch --nobranch --nocommit --revision ${1}
+    fi
+}
+
 # Find the phid for a commit
 function commit_phid {
     phid=$(

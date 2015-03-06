@@ -116,7 +116,8 @@ elif [ ! -z "${DIFFERENTIAL}" ]; then
 
     # Apply the differential patch
     if [ -z "${PHAB_CERT}" ]; then
-        wget -q -O- "https://git.cyrus.foundation/D${DIFFERENTIAL}?download=true" | patch -p1 || exit 1
+        wget --no-check-certificate -q -O- \
+            "https://git.cyrus.foundation/D${DIFFERENTIAL}?download=true" | patch -p1 || exit 1
     else
         arc patch --nobranch --nocommit --revision ${DIFFERENTIAL}
     fi
