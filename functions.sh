@@ -54,7 +54,7 @@ function commit_comment {
     done
 
     message=$(
-            echo "Step **${step}** succeeded on $(os_version)"
+            echo "Step **${step}** succeeded on $(os_version) (image **${IMAGE}**)"
         )
 
     if [ -z "$(which arc 2>/dev/null)" ]; then
@@ -85,7 +85,7 @@ function commit_raise_concern {
     docs_base_url="https://docs.cyrus.foundation/imap/developer/"
 
     message=$(
-            echo -n "This commit **failed step ${step}** on $(os_version)."
+            echo -n "This commit **failed step ${step}** on $(os_version) (image **${IMAGE}**)."
             echo -n '\r\n\r\n'
             echo -n "NOTE: See ${docs_base_url}/${step}-fails.html for details."
             echo -n '\r\n\r\n'
