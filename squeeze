@@ -1,5 +1,8 @@
 FROM debian:squeeze
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+RUN echo "deb http://obs.kolabsys.com/repositories/Kolab:/Development/Debian_6.0/ ./" > /etc/apt/sources.list.d/kolab.list
+ADD http://obs.kolabsys.com/repositories/Kolab:/Development/Debian_6.0/Release.key /root/release.key
+RUN apt-key add /root/release.key
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
@@ -15,6 +18,7 @@ RUN apt-get update && apt-get -y install \
     heimdal-dev \
     libdb-dev \
     libical-dev \
+    libjansson-dev \
     libldap2-dev \
     libpam0g-dev \
     libpcre3-dev \
@@ -45,9 +49,11 @@ RUN git config --global http.sslverify false && \
 
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
+ENV IMAGE squeeze
 ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
 
 WORKDIR /
 ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
+ADD https://cgit.cyrus.foundation/docker/plain/functions.sh /
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]

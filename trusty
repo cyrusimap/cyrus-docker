@@ -46,9 +46,11 @@ RUN git config --global http.sslverify false && \
 
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
+ENV IMAGE trusty
 ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
 
 WORKDIR /
 ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
+ADD https://cgit.cyrus.foundation/docker/plain/functions.sh /
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]
