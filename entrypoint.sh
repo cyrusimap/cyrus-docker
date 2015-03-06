@@ -121,27 +121,34 @@ elif [ ! -z "${DIFFERENTIAL}" ]; then
         arc patch --nobranch --nocommit --revision ${DIFFERENTIAL}
     fi
 
-    autoreconf -vi || (libtoolize && autoreconf -vi)
+    # Store the current and parent commit so we can compare
+    current_commit=$(git rev-parse HEAD)
+    parent_commit=$(git rev-list --parents -n 1 ${current_commit} | awk '{print $2}')
+
+    export current_commit
+    export parent_commit
 
     if [ ${do_preconfig} -eq 1 ]; then
-        echo -n "Performing pre-configuration ..."
-        ./configure --enable-maintainer-mode 2>&1 > configure.log; retval=$?
-        if [ ${retval} -ne 0 ]; then
-            echo " FAILED"
-            cat configure.log
-        fi
-
-        make 2>&1 > make.log; retval=$?
-        if [ ${retval} -ne 0 ]; then
-            echo " FAILED"
-            cat configure.log
-        fi
-
+        echo "Performing pre-configuration ..."
+        _configure_maintainer || \
+            commit_raise_concern --step "pre-configure" --severity $?
     fi
 
-    ./configure ${configure_opts}
+    _configure || \
+        commit_raise_concern --step "configure" --severity $?
 
-    make lex-fix || (make sieve/addr-lex.c sieve/sieve-lex.c && sed -r -i -e 's/int yyl;/yy_size_t yyl;/' -e 's/\tint i;/\tyy_size_t i;/' sieve/addr-lex.c sieve/sieve-lex.c)
+    # We sort of trust this
+    _make_lex_fix || \
+        commit_raise_concern --step "make-lex-fix" --severity $?
 
-    make && make check && exit 0 || exit $?
+    # Make twice, one also re-configures with CFLAGS
+    _make && commit_comment --step "make" ; retval=$?
+
+    if [ ${retval} -ne 0 ]; then
+        commit_raise_concern --step "make" --severity ${retval}
+        exit 1
+    fi
+
+    _make_check && commit_comment --step "make-check" || commit_raise_concern --step "make-check" --severity $?
+
 fi
