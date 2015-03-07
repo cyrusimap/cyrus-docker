@@ -349,26 +349,10 @@ function _find_dnopt {
 #   3   - This commit breaks even the relaxed build
 #
 function _make {
-    # First, compile without extra CFLAGS. This tells us the difference.
-    export CFLAGS=""
-
-    retval=$(_shell make)
+    retval=$(_shell _make_relaxed)
 
     if [ ${retval} -eq 0 ]; then
-        # Tighten the flags
-        export CFLAGS="-g -fPIC -W -Wall -Wextra -Werror"
-
-        # Surely this doesn't fail?
-        retval=$(_shell make clean)
-
-        # Re-configure, no exit code checking, we've already run this.
-        retval=$(_shell _configure_maintainer)
-
-        # Re-configure, no exit code checking, we've already run this.
-        retval=$(_shell _configure)
-
-        # Now for the interesting part
-        retval=$(_shell make)
+        retval=$(_shell make_strict)
 
         if [ ${retval} -eq 0 ]; then
             # Both makes successful
@@ -451,6 +435,58 @@ function _make_check {
     fi
 
     return 0
+}
+
+# Execute relaxed 'make'.
+#
+# Return codes:
+#
+#   0   - OK
+#   1   - The current commit failed
+#
+function _make_relaxed {
+    # Set relaxed flags
+    CFLAGS=""
+    export CFLAGS
+
+    # Surely this doesn't fail?
+    retval=$(_shell make clean)
+
+    # Re-configure, no exit code checking, we've already run this.
+    retval=$(_shell _configure_maintainer)
+
+    # Re-configure, no exit code checking, we've already run this.
+    retval=$(_shell _configure)
+
+    retval=$(_shell make)
+
+    return ${retval}
+}
+
+# Execute strict 'make'.
+#
+# Return codes:
+#
+#   0   - OK
+#   1   - The current commit failed
+#
+function _make_strict {
+    # Set strict flags
+    CFLAGS="-g -fPIC -W -Wall -Wextra -Werror"
+    export CFLAGS
+
+    # Surely this doesn't fail?
+    retval=$(_shell make clean)
+
+    # Re-configure, no exit code checking, we've already run this.
+    retval=$(_shell _configure_maintainer)
+
+    # Re-configure, no exit code checking, we've already run this.
+    retval=$(_shell _configure)
+
+    retval=$(_shell make)
+
+    return ${retval}
 }
 
 function _make_lex_fix {
