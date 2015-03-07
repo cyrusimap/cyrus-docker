@@ -1,6 +1,5 @@
 FROM debian:squeeze
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
-RUN apt-key add /root/release.key
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
@@ -40,6 +39,11 @@ RUN apt-get update && apt-get -y install \
     wget \
     xutils-dev \
     zlib1g-dev
+
+RUN sed -r -i \
+    -e 's/^"([^ ]|\s{2})(.*)$/\1\2/g' \
+    -e 's/^set background=dark/"set background=dark/g' \
+    /etc/vim/vimrc
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \

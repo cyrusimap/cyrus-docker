@@ -42,8 +42,14 @@ RUN apt-get update && apt-get -y install \
     xutils-dev \
     zlib1g-dev
 
+RUN sed -r -i \
+    -e 's/^"([^ ]|\s{2})(.*)$/\1\2/g' \
+    -e 's/^set background=dark/"set background=dark/g' \
+    /etc/vim/vimrc
+
 WORKDIR /srv
-RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+RUN git config --global http.sslverify false && \
+    git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
     cyrus-imapd.git
 
 WORKDIR /root
