@@ -1,7 +1,5 @@
 FROM debian:squeeze
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
-RUN echo "deb http://obs.kolabsys.com/repositories/Kolab:/Development/Debian_6.0/ ./" > /etc/apt/sources.list.d/kolab.list
-ADD http://obs.kolabsys.com/repositories/Kolab:/Development/Debian_6.0/Release.key /root/release.key
 RUN apt-key add /root/release.key
 RUN apt-get update && apt-get -y install \
     autoconf \
@@ -19,7 +17,6 @@ RUN apt-get update && apt-get -y install \
     libdb-dev \
     libglib2.0-dev \
     libical-dev \
-    libjansson-dev \
     libldap2-dev \
     libpam0g-dev \
     libpcre3-dev \
