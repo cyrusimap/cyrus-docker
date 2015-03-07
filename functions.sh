@@ -30,6 +30,44 @@ dnopts[${#dnopts[@]}]="santiago"  ;   nopts[${#nopts[@]}]="--enable-http"
 dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-event-notification"
 dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-http"
 
+# If PS1 is set, we're interactive
+if [ ! -z "${PS1}" ]; then
+    # Set a sensible prompt
+    PS1='[\u@${IMAGE} \W]\$ '
+
+    export GIT_PS1_SHOWDIRTYSTATE=1
+    export GIT_PS1_SHOWUNTRACKEDFILES=1
+    export GIT_PS1_SHOWUPSTREAM="auto verbose"
+
+    if [ ! -f "/etc/bash_completion" ]; then
+        if [ -f "/etc/bash_completion.d/git" ]; then
+            . /etc/bash_completion.d/git
+            PS1='[\u@${IMAGE} \W$(__git_ps1 " (%s)")]\$ '
+        fi
+    else
+        PS1='[\u@${IMAGE} \W$(__git_ps1 " (%s)")]\$ '
+    fi
+
+    PROMPT_COMMAND="echo -ne \"\033]0;${IMAGE} (in ${HOSTNAME})\007\""
+
+    if [ -f "/usr/share/git-core/contrib/completion/git-prompt.sh" ]; then
+        source /usr/share/git-core/contrib/completion/git-prompt.sh
+    fi
+
+    # Just so everyone knows where they are, git fetch origin
+    if [ ! -d "/srv/cyrus-imapd.git" ]; then
+        git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
+                git config --global http.sslverify false
+                git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git
+            )
+    else
+        cd /srv/cyrus-imapd.git
+        git remote set-url origin https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
+        git fetch origin
+        git reset --hard origin/master
+    fi
+fi
+
 function apply-differential {
     # Apply the differential patch
     if [ -z "${PHAB_CERT}" ]; then
@@ -186,7 +224,8 @@ function _configure {
             if [ ${retval3} -eq 0 ]; then
                 local _configure_options_real=$(_configure_options ${configure_opts})
                 retval4=$(_shell ./configure ${_configure_options_real})
-            else
+            # We're not interactive, so check the parent
+            elif [ -z "${PS1}" ]; then
                 if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
                     retval=$(_shell git checkout ${parent_commit})
                     retval=$(_configure; echo $?)
@@ -200,8 +239,11 @@ function _configure {
                 else
                     return 1
                 fi
+            else
+                return 1
             fi
-        else
+        # We're not interactive, so check the parent
+        elif [ -z "${PS1}" ]; then
             if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
                 retval=$(_shell git checkout ${parent_commit})
                 retval=$(_configure; echo $?)
@@ -215,6 +257,8 @@ function _configure {
             else
                 return 1
             fi
+        else
+            return 1
         fi
     fi
 
@@ -259,7 +303,8 @@ function _configure_maintainer {
 
             if [ ${retval3} -ne 0 ]; then
                 retval4=$(./configure --enable-maintainer-mode)
-            else
+            # We're not interactive, so check the parent
+            elif [ -z "${PS1}" ]; then
                 if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
                     retval=$(_shell git checkout ${parent_commit})
                     retval=$(_configure_maintainer; echo $?)
@@ -272,8 +317,11 @@ function _configure_maintainer {
                 else
                     return 1
                 fi
+            else
+                return 1
             fi
-        else
+        # We're not interactive, so check the parent
+        elif [ -z "${PS1}" ]; then
             if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
                 retval=$(_shell git checkout ${parent_commit})
                 retval=$(_configure_maintainer; echo $?)
@@ -286,6 +334,8 @@ function _configure_maintainer {
             else
                 return 1
             fi
+        else
+            return 1
         fi
     fi
 
@@ -361,7 +411,8 @@ function _find_dnopt {
 #   0   - OK
 #   1   - The current commit failed, but the parent also failed
 #   2   - The current commit fails this strict, but the parent did not
-#   3   - This commit breaks even the relaxed build
+#   3   - This commit breaks even the relaxed build, while the parent
+#         did not.
 #
 function _make {
     retval=$(_shell _make_relaxed)
@@ -372,7 +423,8 @@ function _make {
         if [ ${retval} -eq 0 ]; then
             # Both makes successful
             return 0
-        else
+        # We're not interactive, so check the parent
+        elif [ -z "${PS1}" ]; then
             # The step failed, so check the parent commit (if
             # we're not already there).
             if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
@@ -391,8 +443,11 @@ function _make {
                 # see above).
                 return 1
             fi
+        else
+            return 1
         fi
-    else
+    # We're not interactive, so check the parent
+    elif [ -z "${PS1}" ]; then
         # The step failed, so check the parent commit (if
         # we're not already there).
         if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
@@ -411,6 +466,8 @@ function _make {
             # see above).
             return 1
         fi
+    else
+        return 1
     fi
 
     return 0
@@ -430,7 +487,8 @@ function _make_check {
 
     if [ ${retval} -eq 0 ]; then
         return 0
-    else
+    # We're not interactive, so check the parent
+    elif [ -z "${PS1}" ]; then
         # The current commit failed, so check the parent commit (if
         # we're not already there).
         if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
@@ -447,6 +505,8 @@ function _make_check {
             # Return failure for parent commit
             return 1
         fi
+    else
+        return 1
     fi
 
     return 0
