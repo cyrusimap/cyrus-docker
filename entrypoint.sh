@@ -5,7 +5,7 @@ if [ ! -z "$PS1" ]; then
     . /etc/bashrc
 fi
 
-if [ ! -d /srv/cyrus-imapd.git ]; then
+if [ ! -d "/srv/cyrus-imapd.git" ]; then
     git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
             git config --global http.sslverify false
             git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git
@@ -30,14 +30,14 @@ else
 fi
 
 if [ ! -z "${PHAB_CERT}" ]; then
-    cd /srv
-
-    if [ ! -d libphutil ]; then
-        git clone https://github.com/phacility/libphutil.git
+    if [ ! -d "/srv/libphutil/" ]; then
+        git clone https://github.com/phacility/libphutil.git \
+            /srv/libphutil
     fi
 
-    if [ ! -d arcanist ]; then
-        git clone https://github.com/phacility/arcanist.git
+    if [ ! -d "/srv/arcanist/" ]; then
+        git clone https://github.com/phacility/arcanist.git \
+            /srv/arcanist
     fi
 
     if [ -z "${PHAB_USER}" ]; then
