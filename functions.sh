@@ -345,7 +345,7 @@ function _find_dnopt {
 #
 #   0   - OK
 #   1   - The current commit failed, but the parent also failed
-#   2   - The current commit fails this step, but the parent did not
+#   2   - The current commit fails this strict, but the parent did not
 #   3   - This commit breaks even the relaxed build
 #
 function _make {
@@ -394,8 +394,24 @@ function _make {
             fi
         fi
     else
-        # What?
-        return 3
+        # The step failed, so check the parent commit (if
+        # we're not already there).
+        if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
+            retval=$(_shell git checkout ${parent_commit})
+            retval=$(_make; echo $?)
+
+            # The parent did not fail this step
+            if [ ${retval} -eq 0 ]; then
+                return 3
+            else
+                # The parent failed this step
+                return 1
+            fi
+        else
+            # Return failure for parent commit (if not parent commit
+            # see above).
+            return 1
+        fi
     fi
 
     return 0
