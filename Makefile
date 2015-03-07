@@ -1,6 +1,6 @@
 all:
 	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
-		docker build -t cyrusimapd/$$dist - < $$dist ; \
+		docker build -t cyrusimapd/$$dist --no-cache=true - < $$dist ; \
 	done
 
 pull:
