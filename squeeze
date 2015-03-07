@@ -53,6 +53,7 @@ RUN git config --global http.sslverify false && \
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
 ENV IMAGE squeeze
+ADD https://cgit.cyrus.foundation/docker/plain/.bashrc /root/.bashrc
 ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
 
 WORKDIR /

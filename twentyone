@@ -46,6 +46,7 @@ RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
 ENV IMAGE twentyone
+ADD https://cgit.cyrus.foundation/docker/plain/.bashrc /root/.bashrc
 ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
 
 WORKDIR /
