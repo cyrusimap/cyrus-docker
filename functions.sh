@@ -155,6 +155,21 @@ function _configure {
     retval3=0   # The fallback autoreconf return code
     retval4=0   # The actual configure command
 
+    if [ -z "${configure_opts}" ]; then
+        configure_opts="
+                --enable-autocreate \
+                --enable-coverage \
+                --enable-gssapi \
+                --enable-http \
+                --enable-idled \
+                --enable-maintainer-mode \
+                --enable-murder \
+                --enable-nntp \
+                --enable-replication \
+                --enable-unit-tests \
+                --with-ldap=/usr"
+    fi
+
     retval1=$(_shell autoreconf -vi)
 
     if [ ${retval1} -eq 0 ]; then
@@ -170,7 +185,7 @@ function _configure {
 
             if [ ${retval3} -eq 0 ]; then
                 local _configure_options_real=$(_configure_options ${configure_opts})
-                retval4=$(./configure ${configure_opts})
+                retval4=$(_shell ./configure ${_configure_options_real})
             else
                 if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
                     retval=$(_shell git checkout ${parent_commit})
