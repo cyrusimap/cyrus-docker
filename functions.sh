@@ -418,7 +418,7 @@ function _make {
     retval=$(_shell _make_relaxed)
 
     if [ ${retval} -eq 0 ]; then
-        retval=$(_shell make_strict)
+        retval=$(_shell _make_strict)
 
         if [ ${retval} -eq 0 ]; then
             # Both makes successful
