@@ -107,7 +107,13 @@ if [ -z "${DIFFERENTIAL}" ]; then
         exit 1
     fi
 
-    _make_check && commit_comment --step "make-check" || commit_raise_concern --step "make-check" --severity $?
+    _make_check && commit_comment --step "make-check" ; retval=$?
+
+    if [ ${retval} -eq 0 ]; then
+        _cassandane
+    else
+        commit_raise_concern --step "make-check" --severity ${retval}
+    fi
 
 elif [ ! -z "${DIFFERENTIAL}" ]; then
     # This may also mean we have a base commit for the diff
