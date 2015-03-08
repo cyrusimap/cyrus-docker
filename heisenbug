@@ -3,6 +3,7 @@ MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
 RUN yum clean all && yum -y install \
     automake \
     autoconf \
+    bash-completion \
     bison \
     CUnit-devel \
     cyrus-sasl-devel \
@@ -25,25 +26,55 @@ RUN yum clean all && yum -y install \
     make \
     mysql-devel \
     net-snmp-devel \
+    net-tools \
     openldap-devel \
     openssl-devel \
     patch \
+    perl-BSD-Resource \
+    perl-Clone \
+    perl-Config-IniFiles \
+    perl-DateTime \
     perl-devel \
+    perl-Digest-MD5 \
+    perl-Digest-SHA \
+    perl-File-chdir \
+    perl-IO-Socket-INET6 \
+    perl-Net-Server \
+    perl-Sys-Syslog \
+    perl-Test-Unit \
+    perl-Unix-Syslog \
+    perl-XML-Generator \
     php-cli \
     postgresql-devel \
     sqlite-devel \
     tcp_wrappers \
     valgrind-devel \
     vim-enhanced \
-    wget
+    wget \
+    words
+
+WORKDIR /tmp
+RUN wget https://cgit.cyrus.foundation/docker/plain/packages/heisenbug.tar.gz && \
+    tar zxvf heisenbug.tar.gz && \
+    yum --nogpgcheck -y localinstall heisenbug/*.rpm && \
+    rm -rf /tmp/*
 
 WORKDIR /srv
 RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
     cyrus-imapd.git
 
+RUN git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
+    cassandane.git
+
+RUN groupadd -r saslauth ; \
+    groupadd -r mail ; \
+    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
+    -g mail -G saslauth -s /bin/bash -r cyrus
+
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
 ENV IMAGE heisenbug
+ADD https://cgit.cyrus.foundation/docker/plain/.bashrc /root/.bashrc
 ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
 
 WORKDIR /

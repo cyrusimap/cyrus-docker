@@ -4,6 +4,7 @@ RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
     autotools-dev \
+    bash-completion \
     bison \
     build-essential \
     comerr-dev \
@@ -13,21 +14,38 @@ RUN apt-get update && apt-get -y install \
     gperf \
     groff \
     heimdal-dev \
+    libbsd-resource-perl \
+    libclone-perl \
+    libconfig-inifiles-perl \
+    libdatetime-perl \
     libdb-dev \
+    libdigest-sha-perl \
+    libfile-chdir-perl \
     libglib2.0-dev \
     libical-dev \
+    libio-socket-inet6-perl \
+    libio-stringy-perl \
     libldap2-dev \
+    libnet-server-perl \
+    libnews-nntpclient-perl \
     libpam0g-dev \
     libpcre3-dev \
     libsasl2-dev \
     libsnmp-dev \
     libsqlite3-dev \
     libssl-dev \
+    libtest-unit-perl \
     libtool \
+    libunix-syslog-perl \
+    liburi-perl \
+    libxml-generator-perl \
+    libxml-xpath-perl \
     libxml2-dev \
     libwrap0-dev \
     libzephyr-dev \
     lsb-base \
+    miscfiles \
+    net-tools \
     perl \
     php5-cli \
     php5-curl \
@@ -40,6 +58,10 @@ RUN apt-get update && apt-get -y install \
     xutils-dev \
     zlib1g-dev
 
+# packages not available for squeeze:
+#    libencode-imaputf7-perl \
+#    libjansson-dev \
+
 RUN sed -r -i \
     -e 's/^"([^ ]|\s{2})(.*)$/\1\2/g' \
     -e 's/^set background=dark/"set background=dark/g' \
@@ -49,6 +71,15 @@ WORKDIR /srv
 RUN git config --global http.sslverify false && \
     git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
     cyrus-imapd.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
+    cassandane.git
+
+RUN groupadd -r saslauth ; \
+    groupadd -r mail ; \
+    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
+    -g mail -G saslauth -s /bin/bash -r cyrus
 
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
