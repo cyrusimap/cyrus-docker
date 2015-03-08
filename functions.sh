@@ -69,13 +69,16 @@ if [ ! -z "${PS1}" ]; then
 fi
 
 function apply_differential {
-    # Apply the differential patch
-    if [ -z "${PHAB_CERT}" ]; then
-        wget --no-check-certificate -q -O- \
-            "https://git.cyrus.foundation/D${1}?download=true" | patch -p1 || exit 1
-    else
-        arc patch --nobranch --nocommit --revision ${1}
-    fi
+    while [ $# -gt 0 ]; do
+        # Apply the differential patch
+        if [ -z "${PHAB_CERT}" ]; then
+            wget --no-check-certificate -q -O- \
+                "https://git.cyrus.foundation/D${1}?download=true" | patch -p1 || exit 1
+        else
+            arc patch --nobranch --nocommit --revision ${1}
+        fi
+        shift
+    done
 }
 
 # Find the phid for a commit
@@ -187,6 +190,8 @@ function os_version {
 #   ./configure ${CONFIGURE_OPTS}
 #
 function _configure {
+    git clean -d -f -x
+
     # Initialize variables
     retval1=0   # The initial autoreconf return code
     retval2=0   # The fallback libtoolize return code
