@@ -547,7 +547,7 @@ function _make_relaxed {
 #
 function _make_strict {
     # Set strict flags
-    CFLAGS="-g -fPIC -W -Wall -Wextra -Werror"
+    CFLAGS="-g -W -Wall -Wextra -Werror"
     export CFLAGS
 
     # Surely this doesn't fail?
