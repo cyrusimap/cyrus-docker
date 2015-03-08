@@ -48,7 +48,7 @@ if [ ! -z "${PS1}" ]; then
         PS1='[\u@${IMAGE} \W$(__git_ps1 " (%s)")]\$ '
     fi
 
-    PROMPT_COMMAND="echo -ne \"\033]0;${IMAGE} (in ${HOSTNAME})\007\""
+    PROMPT_COMMAND="echo -ne '\033]0;${IMAGE} (in ${HOSTNAME})\007'"
 
     if [ -f "/usr/share/git-core/contrib/completion/git-prompt.sh" ]; then
         source /usr/share/git-core/contrib/completion/git-prompt.sh
@@ -68,7 +68,7 @@ if [ ! -z "${PS1}" ]; then
     fi
 fi
 
-function apply-differential {
+function apply_differential {
     # Apply the differential patch
     if [ -z "${PHAB_CERT}" ]; then
         wget --no-check-certificate -q -O- \
