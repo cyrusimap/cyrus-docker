@@ -38,55 +38,55 @@ clean:
 	done
 
 heisenbug:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 jessie:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 maipo:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 precise:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 rawhide:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 santiago:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 sid:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 squeeze:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 trusty:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 twentyone:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 utopic:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 vivid:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
 wheezy:
-	docker build -t cyrusimapd/$@ - < $@
-	docker run -it --entrypoint="/bin/bash" cyrusimapd/$@ -s
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
 
-.PHONY: heisenbug maipo precise rawhide santiago sid squeeze trusty twentyone utopic vivid wheezy
+.PHONY: heisenbug jessie maipo precise rawhide santiago sid squeeze trusty twentyone utopic vivid wheezy
