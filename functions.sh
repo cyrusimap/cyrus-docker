@@ -184,14 +184,73 @@ function os_version {
     fi
 }
 
+function _cassandane {
+    cd /srv/cyrus-imapd.git
+
+    # Surely this doesn't fail?
+    retval=$(_shell make clean)
+
+    # Re-configure, no exit code checking, we've already run this.
+    retval=$(_shell _configure_maintainer)
+
+    retval=$(_shell _configure \
+        --program-prefix= \
+        --disable-dependency-tracking \
+        --prefix=/usr \
+        --exec-prefix=/usr \
+        --bindir=/usr/bin \
+        --sbindir=/usr/sbin \
+        --sysconfdir=/etc \
+        --datadir=/usr/share \
+        --includedir=/usr/include \
+        --libdir=/usr/lib64 \
+        --libexecdir=/usr/libexec \
+        --localstatedir=/var \
+        --sharedstatedir=/var/lib \
+        --mandir=/usr/share/man \
+        --infodir=/usr/share/info \
+        --with-cyrus-prefix=/usr/bin/ \
+        --with-service-path=/usr/bin/ \
+        --enable-autocreate \
+        --enable-coverage \
+        --enable-gssapi \
+        --enable-http \
+        --enable-idled \
+        --enable-maintainer-mode \
+        --enable-murder \
+        --enable-nntp \
+        --enable-replication \
+        --enable-unit-tests
+        --with-ldap=/usr)
+
+    retval=$(_shell make)
+
+    retval=$(_shell make install)
+
+    cd /srv/cassandane.git
+
+    retval=$(_shell make)
+
+    if [ ${retval} -ne 0 ]; then
+        echo "WARNING: Could not run Cassandane"
+        return 0
+    fi
+
+    _shell sed -r \
+        -e 's|^##rootdir.*$|rootdir=/tmp|g' \
+        -e 's|^##prefix.*$|prefix=/usr|g' \
+        -e '/^#/d' \
+        cassandane.ini.example > cassandane.ini
+
+    _shell ./testrunner.pl -f tap
+}
+
 # A simple routine that runs:
 #
 #   auto(re)conf/libtoolize
 #   ./configure ${CONFIGURE_OPTS}
 #
 function _configure {
-    git clean -d -f -x
-
     # Initialize variables
     retval1=0   # The initial autoreconf return code
     retval2=0   # The fallback libtoolize return code
