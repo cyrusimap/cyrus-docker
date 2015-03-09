@@ -659,7 +659,7 @@ function _make_lex_fix {
 }
 
 function _num_cpus {
-    return $(cat /proc/cpuinfo | grep ^processor | wc -l)
+    echo $(cat /proc/cpuinfo | grep ^processor | wc -l)
 }
 
 # Create 3 as an alias for 1, so the _shell function
