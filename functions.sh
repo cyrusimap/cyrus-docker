@@ -237,18 +237,21 @@ function _cassandane {
     fi
 
     cp -af cassandane.ini.example cassandane.ini
-    _shell sed -r -i \
-        -e 's|^##rootdir.*$|rootdir=/tmp|g' \
-        -e 's|^##prefix.*$|prefix=/usr|g' \
-        -e '/^#/d' \
-        cassandane.ini
+
+    retval=$(_shell \
+            sed -r -i \
+                -e 's|^##rootdir.*$|rootdir=/tmp|g' \
+                -e 's|^##prefix.*$|prefix=/usr|g' \
+                -e '/^#/d' \
+                cassandane.ini
+        )
 
     sed -r -i \
         -e '/"-A$af",/d' \
         -e 's| -A$af 2>/dev/null| 2>/dev/null|g' \
         Cassandane/Daemon.pm
 
-    _shell ./testrunner.pl -f tap
+    retval=$(_shell ./testrunner.pl -f tap)
 }
 
 # A simple routine that runs:
@@ -285,6 +288,7 @@ function _configure {
     if [ ${retval1} -eq 0 ]; then
         local _configure_options_real=$(_configure_options ${configure_opts})
         retval4=$(_shell ./configure ${_configure_options_real})
+        retval=$(_shell _make_lex_fix)
 
     # Older platforms, older autoconf, older libtool
     else
@@ -296,6 +300,9 @@ function _configure {
             if [ ${retval3} -eq 0 ]; then
                 local _configure_options_real=$(_configure_options ${configure_opts})
                 retval4=$(_shell ./configure ${_configure_options_real})
+
+                retval=$(_shell _make_lex_fix)
+
             # We're not interactive, so check the parent
             elif [ -z "${PS1}" ]; then
                 if [ "$(git rev-parse HEAD)" != "${parent_commit}" ]; then
@@ -637,6 +644,10 @@ function _make_strict {
 }
 
 function _make_lex_fix {
+    if [ ! -f "sieve/addr-lex.c" -o ! -f "sieve/sieve-lex.c" ]; then
+        retval=$(_shell make sieve/addr-lex.c sieve/sieve-lex.c)
+    fi
+
     retval=$(_shell make lex-fix)
 
     # 2.5'ism

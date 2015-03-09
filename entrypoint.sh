@@ -95,10 +95,6 @@ if [ -z "${DIFFERENTIAL}" ]; then
     _configure || \
         commit_raise_concern --step "configure" --severity $?
 
-    # We sort of trust this
-    _make_lex_fix || \
-        commit_raise_concern --step "make-lex-fix" --severity $?
-
     # Make twice, one also re-configures with CFLAGS
     _make && commit_comment --step "make" ; retval=$?
 
@@ -155,10 +151,6 @@ elif [ ! -z "${DIFFERENTIAL}" ]; then
 
     _configure || \
         commit_raise_concern --step "configure" --severity $?
-
-    # We sort of trust this
-    _make_lex_fix || \
-        commit_raise_concern --step "make-lex-fix" --severity $?
 
     # Make twice, one also re-configures with CFLAGS
     _make && commit_comment --step "make" ; retval=$?
