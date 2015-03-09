@@ -223,7 +223,7 @@ function _cassandane {
         --enable-unit-tests \
         --with-ldap=/usr)
 
-    retval=$(_shell make)
+    retval=$(_shell make -j$(_num_cpus))
 
     retval=$(_shell make install)
 
@@ -251,7 +251,7 @@ function _cassandane {
         -e 's| -A$af 2>/dev/null| 2>/dev/null|g' \
         Cassandane/Daemon.pm
 
-    retval=$(_shell ./testrunner.pl -f tap)
+    retval=$(_shell ./testrunner.pl -f tap -j $(_num_cpus))
 }
 
 # A simple routine that runs:
@@ -612,7 +612,7 @@ function _make_relaxed {
     # Re-configure, no exit code checking, we've already run this.
     retval=$(_shell _configure)
 
-    retval=$(_shell make)
+    retval=$(_shell make -j$(_num_cpus))
 
     return ${retval}
 }
@@ -638,7 +638,7 @@ function _make_strict {
     # Re-configure, no exit code checking, we've already run this.
     retval=$(_shell _configure)
 
-    retval=$(_shell make)
+    retval=$(_shell make -j$(_num_cpus))
 
     return ${retval}
 }
@@ -656,6 +656,10 @@ function _make_lex_fix {
     fi
 
     return ${retval}
+}
+
+function _num_cpus {
+    return $(cat /proc/cpuinfo | grep ^processor | wc -l)
 }
 
 # Create 3 as an alias for 1, so the _shell function
