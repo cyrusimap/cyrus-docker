@@ -220,7 +220,7 @@ function _cassandane {
         --enable-murder \
         --enable-nntp \
         --enable-replication \
-        --enable-unit-tests
+        --enable-unit-tests \
         --with-ldap=/usr)
 
     retval=$(_shell make)
@@ -236,11 +236,17 @@ function _cassandane {
         return 0
     fi
 
-    _shell sed -r \
+    cp -af cassandane.ini.example cassandane.ini
+    _shell sed -r -i \
         -e 's|^##rootdir.*$|rootdir=/tmp|g' \
         -e 's|^##prefix.*$|prefix=/usr|g' \
         -e '/^#/d' \
-        cassandane.ini.example > cassandane.ini
+        cassandane.ini
+
+    sed -r -i \
+        -e '/"-A$af",/d' \
+        -e 's| -A$af 2>/dev/null| 2>/dev/null|g' \
+        Cassandane/Daemon.pm
 
     _shell ./testrunner.pl -f tap
 }
@@ -257,7 +263,7 @@ function _configure {
     retval3=0   # The fallback autoreconf return code
     retval4=0   # The actual configure command
 
-    if [ -z "${configure_opts}" ]; then
+    if [ -z "$1" -a -z "${configure_opts}" ]; then
         configure_opts="
                 --enable-autocreate \
                 --enable-coverage \
@@ -270,6 +276,8 @@ function _configure {
                 --enable-replication \
                 --enable-unit-tests \
                 --with-ldap=/usr"
+    elif [ ! -z "$1" ]; then
+        configure_opts="$@"
     fi
 
     retval1=$(_shell autoreconf -vi)
