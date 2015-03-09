@@ -46,7 +46,6 @@ RUN apt-get update && apt-get -y install \
     libwrap0-dev \
     libzephyr-dev \
     lsb-base \
-    miscfiles \
     net-tools \
     perl \
     php5-cli \
@@ -56,6 +55,7 @@ RUN apt-get update && apt-get -y install \
     tcl-dev \
     transfig \
     vim \
+    wamerican \
     wget \
     xutils-dev \
     zlib1g-dev
