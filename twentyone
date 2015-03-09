@@ -68,6 +68,11 @@ RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
 RUN git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
     cassandane.git
 
+RUN groupadd -r saslauth ; \
+    groupadd -r mail ; \
+    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
+    -g mail -G saslauth -s /bin/bash -r cyrus
+
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
 ENV IMAGE twentyone
