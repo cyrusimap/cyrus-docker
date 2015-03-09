@@ -11,8 +11,10 @@ pull:
 run:
 	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
 		docker run -t -i \
-			-e "PHAB_CERT=$(PHAB_CERT)" \
+			-e "COMMIT=$(COMMIT)" \
 			-e "DIFFERENTIAL=$(DIFFERENTIAL)" \
+			-e "PHAB_CERT=$(PHAB_CERT)" \
+			-e "PHAB_USER=$(PHAB_USER)" \
 			--rm=true cyrusimapd/$$dist 2>&1 | tee $$dist.log; \
 	done
 
