@@ -17,6 +17,7 @@ RUN apt-get update && apt-get -y install \
     libbsd-resource-perl \
     libclone-perl \
     libconfig-inifiles-perl \
+    libcunit1-dev \
     libdatetime-perl \
     libdb-dev \
     libdigest-sha-perl \
