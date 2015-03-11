@@ -66,6 +66,18 @@ if [ ! -z "${PS1}" ]; then
         git fetch origin
         git reset --hard origin/master
     fi
+
+    if [ ! -d "/srv/cassandane.git" ]; then
+        git clone https://git.cyrus.foundation/diffusion/C/cassandane.git /srv/cassandane.git || (
+                git config --global http.sslverify false
+                git clone https://git.cyrus.foundation/diffusion/C/cassandane.git /srv/cassandane.git
+            )
+    else
+        cd /srv/cassandane.git
+        git remote set-url origin https://git.cyrus.foundation/diffusion/C/cassandane.git
+        git fetch origin
+        git reset --hard origin/master
+    fi
 fi
 
 function apply_differential {
