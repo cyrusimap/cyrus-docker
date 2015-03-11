@@ -18,6 +18,7 @@ RUN yum -y install \
     glib2-devel \
     gperf \
     groff \
+    gzip \
     jansson-devel \
     krb5-devel \
     libdb-devel \
@@ -49,6 +50,7 @@ RUN yum -y install \
     php-cli \
     postgresql-devel \
     sqlite-devel \
+    tar \
     tcp_wrappers \
     valgrind-devel \
     vim-enhanced \

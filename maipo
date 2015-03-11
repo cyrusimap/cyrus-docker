@@ -17,6 +17,7 @@ RUN yum -y install \
     glib2-devel \
     gperf \
     groff \
+    gzip \
     jansson-devel \
     krb5-devel \
     libdb-devel \
