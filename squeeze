@@ -53,6 +53,7 @@ RUN apt-get update && apt-get -y install \
     po-debconf \
     tcl-dev \
     transfig \
+    uuid-dev \
     vim \
     wamerican \
     wget \

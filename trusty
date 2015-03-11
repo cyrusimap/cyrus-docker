@@ -55,6 +55,7 @@ RUN apt-get update && apt-get -y install \
     po-debconf \
     tcl-dev \
     transfig \
+    uuid-dev \
     vim \
     wget \
     xutils-dev \
