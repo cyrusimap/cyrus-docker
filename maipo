@@ -27,6 +27,7 @@ RUN yum -y install \
     make \
     mysql-devel \
     net-snmp-devel \
+    net-tools \
     openldap-devel \
     openssl-devel \
     patch \
