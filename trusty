@@ -57,6 +57,7 @@ RUN apt-get update && apt-get -y install \
     transfig \
     uuid-dev \
     vim \
+    wamerican \
     wget \
     xutils-dev \
     zlib1g-dev

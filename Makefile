@@ -1,15 +1,15 @@
 all:
-	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
+	for dist in $$(find . -mindepth 1 -maxdepth 1 -type f -exec basename {} \; | sort | grep -E '^[a-z]+$$'); do \
 		docker build -t cyrusimapd/$$dist - < $$dist ; \
 	done
 
 pull:
-	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
+	for dist in $$(find . -mindepth 1 -maxdepth 1 -type f -exec basename {} \; | sort | grep -E '^[a-z]+$$'); do \
 		docker pull cyrusimapd/$$dist ; \
 	done
 
 run:
-	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
+	for dist in $$(find . -mindepth 1 -maxdepth 1 -type f -exec basename {} \; | sort | grep -E '^[a-z]+$$'); do \
 		docker run -t -i \
 			-e "COMMIT=$(COMMIT)" \
 			-e "DIFFERENTIAL=$(DIFFERENTIAL)" \
@@ -19,12 +19,12 @@ run:
 	done
 
 push:
-	for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
+	for dist in $$(find . -mindepth 1 -maxdepth 1 -type f -exec basename {} \; | sort | grep -E '^[a-z]+$$'); do \
 		docker push cyrusimapd/$$dist ; \
 	done
 
 list:
-	@for dist in $$(ls -1 | grep -E '^[a-z]+$$'); do \
+	@for dist in $$(find . -mindepth 1 -maxdepth 1 -type f -exec basename {} \; | sort | grep -E '^[a-z]+$$'); do \
 		echo $$dist ; \
 	done
 
