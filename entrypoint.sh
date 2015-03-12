@@ -48,7 +48,7 @@ else
             --enable-murder \
             --enable-nntp \
             --enable-replication \
-            --enable-unit-tests
+            --enable-unit-tests \
             --with-ldap=/usr"
 
     do_preconfig=0
