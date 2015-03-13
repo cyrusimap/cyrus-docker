@@ -16,19 +16,21 @@
 #
 
 # List of distributions with applicable diffs
+unset ddiffs
+unset diffs
 declare -a ddiffs
 declare -a diffs
 
-ddiffs[${#ddiffs[@]}]="santiago"  ;   diffs[${#diffs[@]}]="9"
-ddiffs[${#ddiffs[@]}]="squeeze"   ;   diffs[${#diffs[@]}]="9"
+# Example:
+#ddiffs[${#ddiffs[@]}]="squeeze"   ;   diffs[${#diffs[@]}]="9"
 
 # List of distributions with nono configure options
+unset dnopts
+unset nopts
 declare -a dnopts
 declare -a nopts
 
-dnopts[${#dnopts[@]}]="santiago"  ;   nopts[${#nopts[@]}]="--enable-http"
 dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-event-notification"
-dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-http"
 
 # If PS1 is set, we're interactive
 if [ ! -z "${PS1}" ]; then
@@ -78,28 +80,42 @@ if [ ! -z "${PS1}" ]; then
         git fetch origin
         git reset --hard origin/master
     fi
+
+    cd $HOME
+
 fi
 
 function apply_differential {
+    returnval=0
     while [ $# -gt 0 ]; do
         # Apply the differential patch
         if [ -z "${PHAB_CERT}" ]; then
-            wget --no-check-certificate -q -O- \
-                "https://git.cyrus.foundation/D${1}?download=true" | patch -p1 || exit 1
+            wget --no-check-certificate -q -O./D${1}.patch \
+                "https://git.cyrus.foundation/D${1}?download=true"
+            patch -p1 < ./D${1}.patch
+            retval=$?
         else
             arc patch --nobranch --nocommit --revision ${1}
+            retval=$(find . -type f -name "*.rej" | wc -l)
         fi
+
+        if [ ${retval} -ne 0 ]; then
+            returnval=$(( ${returnval} + ${retval} ))
+        fi
+
         shift
     done
+
+    return ${returnval}
 }
 
 # Find the phid for a commit
 function commit_phid {
     phid=$(
             echo "{\"commits\":[\"rI${1}\"]}" | \
-            arc call-conduit diffusion.getcommits | \
-            awk -v RS=',' -v FS=':' '$1~/\"commitPHID\"/ {print $2}' | \
-            tr -d \"
+                arc call-conduit diffusion.getcommits | \
+                awk -v RS=',' -v FS=':' '$1~/\"commitPHID\"/ {print $2}' | \
+                tr -d \"
         )
 
     echo ${phid}
@@ -194,6 +210,16 @@ function os_version {
     elif [ -f "/etc/system-release" ]; then
         cat /etc/system-release
     fi
+}
+
+function _drydock {
+    cd /srv/cyrus-imapd.git
+
+    for script in `find contrib/drydock-tests/ -type f -name "*.sh" | sort`; do
+        if [ -x $script ]; then
+            retval=$(_shell ./$script)
+        fi
+    done
 }
 
 function _cassandane {
@@ -626,6 +652,12 @@ function _make_relaxed {
 
     retval=$(_shell make -j$(_num_cpus))
 
+    if [ ${retval} -eq 0 ]; then
+        _report_msg "make relaxed OK"
+    else
+        _report_msg "make relaxed FAILED"
+    fi
+
     return ${retval}
 }
 
@@ -652,6 +684,12 @@ function _make_strict {
 
     retval=$(_shell make -j$(_num_cpus))
 
+    if [ ${retval} -eq 0 ]; then
+        _report_msg "make strict OK"
+    else
+        _report_msg "make strict FAILED"
+    fi
+
     return ${retval}
 }
 
@@ -664,7 +702,15 @@ function _make_lex_fix {
 
     # 2.5'ism
     if [ ${retval} -ne 0 ]; then
-        retval=$(_shell make sieve/addr-lex.c sieve/sieve-lex.c && sed -r -i -e 's/int yyl;/yy_size_t yyl;/' -e 's/\tint i;/\tyy_size_t i;/' sieve/addr-lex.c sieve/sieve-lex.c)
+        retval=$(_shell make sieve/addr-lex.c sieve/sieve-lex.c)
+        retval=$(_shell grep -E '^yy_size_t sieveleng;$$' sieve/sieve-lex.c && \
+            sed -r -i -e 's/int yyl;/yy_size_t yyl;/g' sieve/sieve-lex.c)
+
+        retval=$(grep -E ' yy_size_t  _yybytes_len ' sieve/sieve-lex.c && \
+            sed -r -i -s 's/\tint i;/\tyy_size_t i;/g' sieve/sieve-lex.c)
+
+        retval=$(grep -E ' yy_size_t  _yybytes_len ' sieve/addr-lex.c && \
+            sed -r -i -s 's/\tint i;/\tyy_size_t i;/g' sieve/addr-lex.c)
     fi
 
     return ${retval}
@@ -672,6 +718,15 @@ function _make_lex_fix {
 
 function _num_cpus {
     echo $(cat /proc/cpuinfo | grep ^processor | wc -l)
+}
+
+function _report {
+    cat ${TMPDIR:-/tmp}/report.log
+    rm -rf ${TMPDIR:-/tmp}/report.log
+}
+
+function _report_msg {
+    echo "$@" >> ${TMPDIR:-/tmp}/report.log
 }
 
 # Create 3 as an alias for 1, so the _shell function
@@ -682,10 +737,35 @@ function _shell {
     echo "Running $@ ..." >&3
     $@ >&3 2>&3 ; retval=$?
     if [ ${retval} -eq 0 ]; then
+        _report_msg "Running '$@' OK"
         echo "Running $@ OK" >&3
     else
+        _report_msg "Running '$@' FAILED"
         echo "Running $@ FAILED" >&3
     fi
 
     echo ${retval}
+}
+
+function _test_differentials {
+    cd /srv/cyrus-imapd.git
+
+    if [ -z "${PHAB_CERT}" ]; then
+        return 0
+    fi
+
+    ids=$(echo "{\"status\":\"status-open\",\"paths\":[[\"I\",\"\"]]}" | \
+        arc call-conduit differential.query | \
+        python -mjson.tool | \
+        sed -r \
+            -e '/^\s+"id":\s*"[0-9]+",$/!d' \
+            -e 's/^\s+"id":\s*"([0-9]+)",/\1/g' | \
+        sort --version-sort)
+
+    for id in ${ids}; do
+        git clean -d -f -x
+        git reset --hard origin/master
+
+        retval=$(_shell apply_differential ${id})
+    done
 }

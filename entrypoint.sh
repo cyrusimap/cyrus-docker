@@ -29,6 +29,7 @@ else
     git reset --hard origin/master
 fi
 
+cd $HOME
 
 source /functions.sh
 
@@ -99,39 +100,12 @@ if [ -z "${DIFFERENTIAL}" ]; then
     export current_commit
     export parent_commit
 
-    if [ ${do_preconfig} -eq 1 ]; then
-        echo "Performing pre-configuration ..."
-        _configure_maintainer || \
-            commit_raise_concern --step "pre-configure" --severity $?
-    fi
-
-    _configure || \
-        commit_raise_concern --step "configure" --severity $?
-
-    # Make twice, one also re-configures with CFLAGS
-    _make && commit_comment --step "make" ; retval=$?
-
-    if [ ${retval} -ne 0 ]; then
-        commit_raise_concern --step "make" --severity ${retval}
-        exit 1
-    fi
-
-    _make_check && commit_comment --step "make-check" ; retval=$?
-
-    if [ ${retval} -eq 0 ]; then
-        _cassandane
-    else
-        commit_raise_concern --step "make-check" --severity ${retval}
-    fi
-
 elif [ ! -z "${DIFFERENTIAL}" ]; then
     # This may also mean we have a base commit for the diff
     if [ ! -z "${PHAB_CERT}" ]; then
         BASE_GIT_COMMIT=$(echo {\"diff_id\": ${DIFF_ID}} | arc call-conduit differential.getdiff | awk -v RS=',' -v FS=':' '$1~/\"sourceControlBaseRevision\"/ {print $2}' | tr -d \")
     fi
 
-    cd /srv
-    cd /srv/cyrus-imapd.git
     git clean -d -f -x
 
     # Someone may still want to build this different
@@ -141,14 +115,6 @@ elif [ ! -z "${DIFFERENTIAL}" ]; then
         git checkout -f ${BASE_GIT_COMMIT}
     fi
 
-    # Apply the differential patch
-    if [ -z "${PHAB_CERT}" ]; then
-        wget --no-check-certificate -q -O- \
-            "https://git.cyrus.foundation/D${DIFFERENTIAL}?download=true" | patch -p1 || exit 1
-    else
-        arc patch --nobranch --nocommit --revision ${DIFFERENTIAL}
-    fi
-
     # Store the current and parent commit so we can compare
     current_commit=$(git rev-parse HEAD)
     parent_commit=$(git rev-list --parents -n 1 ${current_commit} | awk '{print $2}')
@@ -156,23 +122,37 @@ elif [ ! -z "${DIFFERENTIAL}" ]; then
     export current_commit
     export parent_commit
 
-    if [ ${do_preconfig} -eq 1 ]; then
-        echo "Performing pre-configuration ..."
-        _configure_maintainer || \
-            commit_raise_concern --step "pre-configure" --severity $?
-    fi
-
-    _configure || \
-        commit_raise_concern --step "configure" --severity $?
-
-    # Make twice, one also re-configures with CFLAGS
-    _make && commit_comment --step "make" ; retval=$?
-
-    if [ ${retval} -ne 0 ]; then
-        commit_raise_concern --step "make" --severity ${retval}
-        exit 1
-    fi
-
-    _make_check && commit_comment --step "make-check" || commit_raise_concern --step "make-check" --severity $?
+    # Apply the differential patch
+    apply_differential ${DIFFERENTIAL}
 
 fi
+
+#
+# This is the actual legwork
+#
+if [ ${do_preconfig} -eq 1 ]; then
+    echo "Performing pre-configuration ..."
+    _configure_maintainer || \
+        commit_raise_concern --step "pre-configure" --severity $?
+fi
+
+_configure || \
+    commit_raise_concern --step "configure" --severity $?
+
+# Make twice, one also re-configures with CFLAGS
+_make; retval=$?
+
+if [ ${retval} -ne 0 ]; then
+    commit_raise_concern --step "make" --severity ${retval}
+    _make_relaxed
+fi
+
+_make_check || commit_raise_concern --step "make-check" --severity $?
+
+_cassandane || commit_raise_concern --step "cassandane" --severity $?
+
+_test_differentials
+
+echo "=== REPORT ==="
+
+_report
