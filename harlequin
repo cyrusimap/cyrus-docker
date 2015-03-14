@@ -1,0 +1,77 @@
+FROM opensuse:13.2
+MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+RUN zypper --non-interactive --gpg-auto-import-keys ref
+RUN zypper in -y \
+    automake \
+    autoconf \
+    bash-completion \
+    bison \
+    cunit-devel \
+    cyrus-sasl-crammd5 \
+    cyrus-sasl-devel \
+    cyrus-sasl-digestmd5 \
+    cyrus-sasl-plain \
+    cyrus-sasl-saslauthd \
+    file \
+    flex \
+    gcc \
+    git \
+    glib2-devel \
+    gperf \
+    groff \
+    krb5-devel \
+    libdb-4_8-devel \
+    libical-devel \
+    libjansson-devel \
+    libmysqld-devel \
+    libopenssl-devel \
+    libtool \
+    libuuid-devel \
+    libxml2-devel \
+    make \
+    net-snmp-devel \
+    openldap2-devel \
+    patch \
+    perl-BSD-Resource \
+    perl-Clone \
+    perl-Config-IniFiles \
+    perl-DateTime \
+    perl-Digest-SHA1 \
+    perl-File-chdir \
+    perl-IO-Socket-INET6 \
+    perl-Net-Server \
+    perl-Test-Unit \
+    perl-Unix-Syslog \
+    perl-URI \
+    php5 \
+    postgresql-devel \
+    sqlite3-devel \
+    tar \
+    valgrind-devel \
+    vim \
+    wget \
+    words
+
+WORKDIR /srv
+RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+    cyrus-imapd.git
+
+RUN git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
+    cassandane.git
+
+RUN groupadd -r saslauth ; \
+    groupadd -r mail ; \
+    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
+    -g mail -G saslauth -s /bin/bash -r cyrus
+
+WORKDIR /root
+ENV PATH /srv/arcanist/bin/:$PATH
+ENV IMAGE harlequin
+ADD https://cgit.cyrus.foundation/docker/plain/.bashrc /root/.bashrc
+ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
+
+WORKDIR /
+ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
+ADD https://cgit.cyrus.foundation/docker/plain/functions.sh /
+RUN chmod 755 /entrypoint.sh
+ENTRYPOINT [ "/entrypoint.sh" ]
