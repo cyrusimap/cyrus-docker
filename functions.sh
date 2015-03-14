@@ -270,7 +270,7 @@ function _drydock {
 }
 
 function _cassandane {
-    if [ $(find_dnfunc '_cassandane'; echo $?) -ne 0 ]; then
+    if [ $(_shell _find_dnfunc '_cassandane') -ne 0 ]; then
         echo "Skipping '_cassandane' on ${IMAGE}"
         return 0
     fi
