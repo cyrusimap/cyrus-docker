@@ -32,6 +32,10 @@ declare -a nopts
 
 dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-event-notification"
 
+# Create 3 as an alias for 1, so the _shell function
+# can output data without the caller getting the input.
+exec 3>&1
+
 # If PS1 is set, we're interactive
 if [ ! -z "${PS1}" ]; then
     # Set a sensible prompt
@@ -63,10 +67,13 @@ if [ ! -z "${PS1}" ]; then
                 git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git
             )
     else
-        cd /srv/cyrus-imapd.git
+        pushd /srv/cyrus-imapd.git >&3
         git remote set-url origin https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
         git fetch origin
         git reset --hard origin/master
+
+        # /srv/cyrus-imapd.git
+        popd >&3
     fi
 
     if [ ! -d "/srv/cassandane.git" ]; then
@@ -75,18 +82,21 @@ if [ ! -z "${PS1}" ]; then
                 git clone https://git.cyrus.foundation/diffusion/C/cassandane.git /srv/cassandane.git
             )
     else
-        cd /srv/cassandane.git
+        pushd /srv/cassandane.git
         git remote set-url origin https://git.cyrus.foundation/diffusion/C/cassandane.git
         git fetch origin
         git reset --hard origin/master
+
+        # /srv/cassandane.git
+        popd >&3
     fi
-
-    cd $HOME
-
 fi
 
 function apply_differential {
     returnval=0
+
+    pushd /srv/cyrus-imapd.git >&3
+
     while [ $# -gt 0 ]; do
         # Apply the differential patch
         if [ -z "${PHAB_CERT}" ]; then
@@ -105,6 +115,9 @@ function apply_differential {
 
         shift
     done
+
+    # /srv/cyrus-imapd.git
+    popd >&3
 
     return ${returnval}
 }
@@ -161,7 +174,8 @@ function commit_raise_concern {
         esac
     done
 
-    docs_base_url="https://docs.cyrus.foundation/imap/developer/"
+    # No trailing slash!
+    docs_base_url="https://docs.cyrus.foundation/imap/developer"
 
     message=$(
             echo -n "This commit **failed step ${step}** on $(os_version) (image **${IMAGE}**)."
@@ -213,23 +227,37 @@ function os_version {
 }
 
 function _drydock {
-    cd /srv/cyrus-imapd.git
+    returnval=0
+
+    pushd /srv/cyrus-imapd.git >&3
 
     for script in `find contrib/drydock-tests/ -type f -name "*.sh" | sort`; do
         if [ -x $script ]; then
             retval=$(_shell ./$script)
+
+            if [ ${retval} -ne 0 ]; then
+                returnval=$(( ${returnval} + ${retval} ))
+            fi
         fi
     done
+
+    # /srv/cyrus-imapd.git
+    popd >&3
+
+    return ${returnval}
 }
 
 function _cassandane {
-    cd /srv/cyrus-imapd.git
+    pushd /srv/cyrus-imapd.git >&3
 
     # Surely this doesn't fail?
     retval=$(_shell make clean)
 
     # Re-configure, no exit code checking, we've already run this.
     retval=$(_shell _configure_maintainer)
+
+    CFLAGS="-g -W -Wall -Wextra -Werror"
+    export CFLAGS
 
     retval=$(_shell _configure \
         --program-prefix= \
@@ -263,9 +291,54 @@ function _cassandane {
 
     retval=$(_shell make -j$(_num_cpus))
 
+    if [ ${retval} -ne 0 ]; then
+        CFLAGS=""
+        export CFLAGS
+
+        retval=$(_shell _configure \
+            --program-prefix= \
+            --disable-dependency-tracking \
+            --prefix=/usr \
+            --exec-prefix=/usr \
+            --bindir=/usr/bin \
+            --sbindir=/usr/sbin \
+            --sysconfdir=/etc \
+            --datadir=/usr/share \
+            --includedir=/usr/include \
+            --libdir=/usr/lib64 \
+            --libexecdir=/usr/libexec \
+            --localstatedir=/var \
+            --sharedstatedir=/var/lib \
+            --mandir=/usr/share/man \
+            --infodir=/usr/share/info \
+            --with-cyrus-prefix=/usr/bin/ \
+            --with-service-path=/usr/bin/ \
+            --enable-autocreate \
+            --enable-coverage \
+            --enable-gssapi \
+            --enable-http \
+            --enable-idled \
+            --enable-maintainer-mode \
+            --enable-murder \
+            --enable-nntp \
+            --enable-replication \
+            --enable-unit-tests \
+            --with-ldap=/usr)
+
+        retval=$(_shell make -j$(_num_cpus))
+
+        if [ ${retval} -ne 0 ]; then
+            # /srv/cyrus-imapd.git
+            popd >&3
+
+            return 1
+        fi
+
+    fi
+
     retval=$(_shell make install)
 
-    cd /srv/cassandane.git
+    pushd /srv/cassandane.git
 
     retval=$(_shell make)
 
@@ -290,6 +363,14 @@ function _cassandane {
         Cassandane/Daemon.pm
 
     retval=$(_shell ./testrunner.pl -f tap -j $(_num_cpus))
+
+    # /srv/cassandane.git
+    popd >&3
+
+    # /srv/cyrus-imapd.git
+    popd >&3
+
+    return ${retval}
 }
 
 # A simple routine that runs:
@@ -321,6 +402,8 @@ function _configure {
         configure_opts="$@"
     fi
 
+    pushd /srv/cyrus-imapd.git >&3
+
     retval1=$(_shell autoreconf -vi)
 
     if [ ${retval1} -eq 0 ]; then
@@ -348,15 +431,27 @@ function _configure {
                     retval=$(_configure; echo $?)
 
                     if [ ${retval} -eq 0 ]; then
+                        # /srv/cyrus-imapd.git
+                        popd >&3
+
                         return 2
                     else
+                        # /srv/cyrus-imapd.git
+                        popd >&3
+
                         return 1
                     fi
 
                 else
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 1
                 fi
             else
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 1
             fi
         # We're not interactive, so check the parent
@@ -366,18 +461,33 @@ function _configure {
                 retval=$(_configure; echo $?)
 
                 if [ ${retval} -eq 0 ]; then
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 2
                 else
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 1
                 fi
 
             else
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 1
             fi
         else
+            # /srv/cyrus-imapd.git
+            popd >&3
+
             return 1
         fi
     fi
+
+    # /srv/cyrus-imapd.git
+    popd >&3
 
     return 0
 }
@@ -406,6 +516,8 @@ function _configure_maintainer {
     retval3=0   # The fallback autoreconf return code
     retval4=0   # The actual configure command
 
+    pushd /srv/cyrus-imapd.git >&3
+
     retval1=$(_shell autoreconf -vi)
 
     if [ ${retval1} -eq 0 ]; then
@@ -427,14 +539,26 @@ function _configure_maintainer {
                     retval=$(_configure_maintainer; echo $?)
 
                     if [ ${retval} -eq 0 ]; then
+                        # /srv/cyrus-imapd.git
+                        popd >&3
+
                         return 2
                     else
+                        # /srv/cyrus-imapd.git
+                        popd >&3
+
                         return 1
                     fi
                 else
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 1
                 fi
             else
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 1
             fi
         # We're not interactive, so check the parent
@@ -444,17 +568,32 @@ function _configure_maintainer {
                 retval=$(_configure_maintainer; echo $?)
 
                 if [ ${retval} -eq 0 ]; then
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 2
                 else
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 1
                 fi
             else
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 1
             fi
         else
+            # /srv/cyrus-imapd.git
+            popd >&3
+
             return 1
         fi
     fi
+
+    # /srv/cyrus-imapd.git
+    popd >&3
 
     return 0
 }
@@ -465,8 +604,30 @@ function _configure_options {
     _config_opts=""
     _config_nopts=""
 
+    pushd /srv/cyrus-imapd.git >&3
+
     while [ $# -gt 0 ]; do
         case $1 in
+            --with-cyrus-prefix*)
+                    grep "cyrus-prefix" configure.ac >/dev/null 2>&1; retval=$?
+                    if [ ${retval} -eq 0 ]; then
+                        _config_opts="${_config_opts} $1"
+                    else
+                        echo "Dropping $1, no longer valid." >&3
+                    fi
+                    shift
+                ;;
+
+            --with-service-path*)
+                    grep "service-path" configure.ac >/dev/null 2>&1; retval=$?
+                    if [ ${retval} -eq 0 ]; then
+                        _config_opts="${_config_opts} $1"
+                    else
+                        echo "Dropping $1, no longer valid." >&3
+                    fi
+                    shift
+                ;;
+
             *)
                     retval=$(_find_dnopt $1; echo $?)
 
@@ -493,6 +654,9 @@ function _configure_options {
             echo "I have ${diffs} marked as applicable to ${IMAGE}" >&3
         fi
     fi
+
+    # /srv/cyrus-imapd.git
+    popd >&3
 
     echo "${_config_opts}"
 }
@@ -532,12 +696,17 @@ function _find_dnopt {
 #         did not.
 #
 function _make {
+    pushd /srv/cyrus-imapd.git >&3
+
     retval=$(_shell _make_relaxed)
 
     if [ ${retval} -eq 0 ]; then
         retval=$(_shell _make_strict)
 
         if [ ${retval} -eq 0 ]; then
+            # /srv/cyrus-imapd.git
+            popd >&3
+
             # Both makes successful
             return 0
         # We're not interactive, so check the parent
@@ -550,17 +719,29 @@ function _make {
 
                 # The parent did not fail this step
                 if [ ${retval} -eq 0 ]; then
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 2
                 else
                     # The parent failed this step
+                    # /srv/cyrus-imapd.git
+                    popd >&3
+
                     return 1
                 fi
             else
                 # Return failure for parent commit (if not parent commit
                 # see above).
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 1
             fi
         else
+            # /srv/cyrus-imapd.git
+            popd >&3
+
             return 1
         fi
     # We're not interactive, so check the parent
@@ -573,19 +754,34 @@ function _make {
 
             # The parent did not fail this step
             if [ ${retval} -eq 0 ]; then
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 3
             else
                 # The parent failed this step
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 1
             fi
         else
             # Return failure for parent commit (if not parent commit
             # see above).
+            # /srv/cyrus-imapd.git
+            popd >&3
+
             return 1
         fi
     else
+        # /srv/cyrus-imapd.git
+        popd >&3
+
         return 1
     fi
+
+    # /srv/cyrus-imapd.git
+    popd >&3
 
     return 0
 }
@@ -599,6 +795,8 @@ function _make {
 #   2   - The current commit fails this step, but the parent did not
 #
 function _make_check {
+    pushd /srv/cyrus-imapd.git >&3
+
     # First, compile without extra CFLAGS. This tells us the difference.
     retval=$(_shell make check)
 
@@ -614,17 +812,32 @@ function _make_check {
 
             # The parent commit did not fail make check
             if [ ${retval} -eq 0 ]; then
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 2
             else
+                # /srv/cyrus-imapd.git
+                popd >&3
+
                 return 1
             fi
         else
+            # /srv/cyrus-imapd.git
+            popd >&3
+
             # Return failure for parent commit
             return 1
         fi
     else
+        # /srv/cyrus-imapd.git
+        popd >&3
+
         return 1
     fi
+
+    # /srv/cyrus-imapd.git
+    popd >&3
 
     return 0
 }
@@ -637,6 +850,8 @@ function _make_check {
 #   1   - The current commit failed
 #
 function _make_relaxed {
+    pushd /srv/cyrus-imapd.git >&3
+
     # Set relaxed flags
     CFLAGS=""
     export CFLAGS
@@ -658,6 +873,8 @@ function _make_relaxed {
         _report_msg "make relaxed FAILED"
     fi
 
+    popd >&3
+
     return ${retval}
 }
 
@@ -669,6 +886,8 @@ function _make_relaxed {
 #   1   - The current commit failed
 #
 function _make_strict {
+    pushd /srv/cyrus-imapd.git >&3
+
     # Set strict flags
     CFLAGS="-g -W -Wall -Wextra -Werror"
     export CFLAGS
@@ -690,10 +909,15 @@ function _make_strict {
         _report_msg "make strict FAILED"
     fi
 
+    # /srv/cyrus-imapd.git
+    popd >&3
+
     return ${retval}
 }
 
 function _make_lex_fix {
+    pushd /srv/cyrus-imapd.git >&3
+
     if [ ! -f "sieve/addr-lex.c" -o ! -f "sieve/sieve-lex.c" ]; then
         retval=$(_shell make sieve/addr-lex.c sieve/sieve-lex.c)
     fi
@@ -713,6 +937,9 @@ function _make_lex_fix {
             sed -r -i -s 's/\tint i;/\tyy_size_t i;/g' sieve/addr-lex.c)
     fi
 
+    # /srv/cyrus-imapd.git
+    popd >&3
+
     return ${retval}
 }
 
@@ -729,10 +956,6 @@ function _report_msg {
     echo "$@" >> ${TMPDIR:-/tmp}/report.log
 }
 
-# Create 3 as an alias for 1, so the _shell function
-# can output data without the caller getting the input.
-exec 3>&1
-
 function _shell {
     echo "Running $@ ..." >&3
     $@ >&3 2>&3 ; retval=$?
@@ -748,7 +971,7 @@ function _shell {
 }
 
 function _test_differentials {
-    cd /srv/cyrus-imapd.git
+    pushd /srv/cyrus-imapd.git >&3
 
     if [ -z "${PHAB_CERT}" ]; then
         return 0
@@ -768,4 +991,7 @@ function _test_differentials {
 
         retval=$(_shell apply_differential ${id})
     done
+
+    # /srv/cyrus-imapd.git
+    popd >&3
 }
