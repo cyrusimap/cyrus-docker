@@ -30,7 +30,29 @@ unset nopts
 declare -a dnopts
 declare -a nopts
 
-dnopts[${#dnopts[@]}]="squeeze"   ;   nopts[${#nopts[@]}]="--enable-event-notification"
+# opensuse 13.1 (bottle) does not have cunit-devel packages
+dnopts[${#dnopts[@]}]="bottle"      ;   nopts[${#nopts[@]}]="--enable-unit-tests"
+
+# debian 6 (squeeze) does not have libjansson
+dnopts[${#dnopts[@]}]="squeeze"     ;   nopts[${#nopts[@]}]="--enable-event-notification"
+
+# List of functions we shouldn't execute on these dists
+unset dnfuncs
+unset nfuncs
+declare -a dnfuncs
+declare -a nfuncs
+
+# opensuse 13.1 (bottle) does not have cunit-devel packages, so no expectation of
+# being able to run 'make check'
+dnfuncs[${#dnfuncs[@]}]="bottle"    ;   nfuncs[${#nfuncs[@]}]="_make_check"
+
+# opensuse 13.1 (bootle) lacks packages perl-Encode-IMAPUT7,
+# perl-IO-Scalar, perl-News-NNTPClient, perl-XML-Generator.
+dnfuncs[${#dnfuncs[@]}]="bottle"    ;   nfuncs[${#nfuncs[@]}]="_cassandane"
+# opensuse 13.2 (harlequin): same
+dnfuncs[${#dnfuncs[@]}]="harlequin" ;   nfuncs[${#nfuncs[@]}]="_cassandane"
+# opensuse next (tumbleweed): same
+dnfuncs[${#dnfuncs[@]}]="tumbleweed";   nfuncs[${#nfuncs[@]}]="_cassandane"
 
 # Create 3 as an alias for 1, so the _shell function
 # can output data without the caller getting the input.
@@ -248,6 +270,11 @@ function _drydock {
 }
 
 function _cassandane {
+    if [ $(find_dnfunc '_cassandane'; echo $?) -ne 0 ]; then
+        echo "Skipping '_cassandane' on ${IMAGE}"
+        return 0
+    fi
+
     pushd /srv/cyrus-imapd.git >&3
 
     # Surely this doesn't fail?
@@ -685,6 +712,20 @@ function _find_dnopt {
     return 0
 }
 
+function _find_dnfunc {
+    x=0
+    while [ ${x} -lt ${#dnfuncs[@]} ]; do
+        if [ "${dnfuncs[$x]}" == "${IMAGE}" ]; then
+            if [ "${nfuncs[$x]}" == "$1" ]; then
+                return 1
+            fi
+        fi
+        let x++
+    done
+
+    return 0
+}
+
 # Execute 'make' in two different forms: relaxed and tight.
 #
 # Return codes:
@@ -795,6 +836,11 @@ function _make {
 #   2   - The current commit fails this step, but the parent did not
 #
 function _make_check {
+    if [ $(find_dnfunc '_make_check'; echo $?) -ne 0 ]; then
+        echo "Skipping '_make_check' on ${IMAGE}"
+        return 0
+    fi
+
     pushd /srv/cyrus-imapd.git >&3
 
     # First, compile without extra CFLAGS. This tells us the difference.
