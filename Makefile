@@ -39,6 +39,14 @@ clean:
 		docker rmi -f $$image ; \
 	done
 
+bottle:
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
+
+harlequin:
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
+
 heisenbug:
 	docker build -t $@ - < $@
 	docker run -it --entrypoint="/bin/bash" $@ -s
@@ -75,6 +83,10 @@ trusty:
 	docker build -t $@ - < $@
 	docker run -it --entrypoint="/bin/bash" $@ -s
 
+tumbleweed:
+	docker build -t $@ - < $@
+	docker run -it --entrypoint="/bin/bash" $@ -s
+
 twentyone:
 	docker build -t $@ - < $@
 	docker run -it --entrypoint="/bin/bash" $@ -s
@@ -91,4 +103,4 @@ wheezy:
 	docker build -t $@ - < $@
 	docker run -it --entrypoint="/bin/bash" $@ -s
 
-.PHONY: heisenbug jessie maipo precise rawhide santiago sid squeeze trusty twentyone utopic vivid wheezy
+.PHONY: bottle harlequin heisenbug jessie maipo precise rawhide santiago sid squeeze trusty tumbleweed twentyone utopic vivid wheezy
