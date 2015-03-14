@@ -1,0 +1,85 @@
+FROM centos:centos5
+MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+RUN yum -y install epel-release
+RUN yum clean all
+RUN yum -y update
+RUN yum -y install \
+    automake \
+    autoconf \
+    bash-completion \
+    bison \
+    bzip2 \
+    CUnit-devel \
+    cyrus-sasl-devel \
+    cyrus-sasl-plain \
+    cyrus-sasl-md5 \
+    db4-devel \
+    flex \
+    gcc \
+    git \
+    gperf \
+    glib2-devel \
+    gperf \
+    groff \
+    gzip \
+    jansson-devel \
+    krb5-devel \
+    libical-devel \
+    libtool \
+    libuuid-devel \
+    libxml2-devel \
+    make \
+    mysql-devel \
+    net-snmp-devel \
+    net-tools \
+    openldap-devel \
+    openssl-devel \
+    patch \
+    perl-BSD-Resource \
+    perl-Clone \
+    perl-Config-IniFiles \
+    perl-DateTime \
+    perl-devel \
+    perl-Digest-MD5 \
+    perl-Digest-SHA \
+    perl-File-chdir \
+    perl-IO-Socket-INET6 \
+    perl-Net-Server \
+    perl-Sys-Syslog \
+    perl-Test-Unit \
+    perl-Unix-Syslog \
+    perl-XML-Generator \
+    php-cli \
+    postgresql-devel \
+    sqlite-devel \
+    tar \
+    tcp_wrappers \
+    valgrind-devel \
+    vim-enhanced \
+    wget \
+    words
+
+WORKDIR /tmp
+RUN wget https://cgit.cyrus.foundation/docker/plain/packages/tikanga.tar.gz && \
+    tar zxvf tikanga.tar.gz && \
+    yum --nogpgcheck -y localinstall tikanga/*.rpm && \
+    rm -rf /tmp/*
+
+WORKDIR /srv
+RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+    cyrus-imapd.git
+
+RUN git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
+    cassandane.git
+
+WORKDIR /root
+ENV PATH /srv/arcanist/bin/:$PATH
+ENV IMAGE tikanga
+ADD https://cgit.cyrus.foundation/docker/plain/.bashrc /root/.bashrc
+ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
+
+WORKDIR /
+ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
+ADD https://cgit.cyrus.foundation/docker/plain/functions.sh /
+RUN chmod 755 /entrypoint.sh
+ENTRYPOINT [ "/entrypoint.sh" ]

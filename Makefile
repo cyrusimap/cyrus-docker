@@ -39,6 +39,18 @@ clean:
 		docker rmi -f $$image ; \
 	done
 
+centos: rhel
+
+debian: squeeze wheezy jessie sid
+
+fedora: heisenbug twentyone rawhide
+
+opensuse: bottle harlequin tumbleweed
+
+rhel: santiago maipo
+
+ubuntu: precise trusty utopic vivid
+
 bottle:
 	docker build -t $@ - < $@
 	docker run -it --entrypoint="/bin/bash" $@ -s
@@ -103,4 +115,8 @@ wheezy:
 	docker build -t $@ - < $@
 	docker run -it --entrypoint="/bin/bash" $@ -s
 
-.PHONY: bottle harlequin heisenbug jessie maipo precise rawhide santiago sid squeeze trusty tumbleweed twentyone utopic vivid wheezy
+tikanga:
+	docker build -t $@ - < tikanga.obsolete
+	docker run -it --entrypoint="/bin/bash" $@ -s
+
+.PHONY: bottle harlequin heisenbug jessie maipo precise rawhide santiago sid squeeze tikanga trusty tumbleweed twentyone utopic vivid wheezy
