@@ -7,6 +7,7 @@ RUN yum -y install \
     autoconf \
     bash-completion \
     bison \
+    bzip2 \
     CUnit-devel \
     cyrus-sasl-devel \
     cyrus-sasl-plain \
