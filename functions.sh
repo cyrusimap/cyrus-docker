@@ -270,7 +270,7 @@ function _drydock {
 }
 
 function _cassandane {
-    if [ $(_shell _find_dnfunc '_cassandane') -ne 0 ]; then
+    if [ $(_find_dnfunc '_cassandane'; echo $?) -ne 0 ]; then
         echo "Skipping '_cassandane' on ${IMAGE}"
         return 0
     fi
@@ -836,7 +836,7 @@ function _make {
 #   2   - The current commit fails this step, but the parent did not
 #
 function _make_check {
-    if [ $(find_dnfunc '_make_check'; echo $?) -ne 0 ]; then
+    if [ $(_find_dnfunc '_make_check'; echo $?) -ne 0 ]; then
         echo "Skipping '_make_check' on ${IMAGE}"
         return 0
     fi
