@@ -33,6 +33,9 @@ declare -a nopts
 # opensuse 13.1 (bottle) does not have cunit-devel packages
 dnopts[${#dnopts[@]}]="bottle"      ;   nopts[${#nopts[@]}]="--enable-unit-tests"
 
+# ubuntu 12.04 (precise) does not support some of the structs in imap/jcal.c
+dnopts[${#dnopts[@]}]="precise"     ;   nopts[${#nopts[@]}]="--enable-http"
+
 # debian 6 (squeeze) does not have libjansson
 dnopts[${#dnopts[@]}]="squeeze"     ;   nopts[${#nopts[@]}]="--enable-event-notification"
 dnopts[${#dnopts[@]}]="squeeze"     ;   nopts[${#nopts[@]}]="--enable-http"
