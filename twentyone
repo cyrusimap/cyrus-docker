@@ -1,8 +1,6 @@
 FROM fedora:21
 MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
-RUN yum clean all
-RUN yum -y update
-RUN yum -y install \
+RUN yum clean all && yum -y install \
     automake \
     autoconf \
     bash-completion \
