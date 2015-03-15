@@ -35,6 +35,7 @@ dnopts[${#dnopts[@]}]="bottle"      ;   nopts[${#nopts[@]}]="--enable-unit-tests
 
 # debian 6 (squeeze) does not have libjansson
 dnopts[${#dnopts[@]}]="squeeze"     ;   nopts[${#nopts[@]}]="--enable-event-notification"
+dnopts[${#dnopts[@]}]="squeeze"     ;   nopts[${#nopts[@]}]="--enable-http"
 
 # List of functions we shouldn't execute on these dists
 unset dnfuncs
@@ -271,7 +272,8 @@ function _drydock {
 
 function _cassandane {
     if [ $(_find_dnfunc '_cassandane'; echo $?) -ne 0 ]; then
-        echo "Skipping '_cassandane' on ${IMAGE}"
+        echo "Skipping '_cassandane' on ${IMAGE}" >&3
+        _report_msg "Running '_cassandane' SKIPPED"
         return 0
     fi
 
@@ -297,7 +299,7 @@ function _cassandane {
         --datadir=/usr/share \
         --includedir=/usr/include \
         --libdir=/usr/lib64 \
-        --libexecdir=/usr/libexec \
+        --libexecdir=/usr/libexec/cyrus-imapd \
         --localstatedir=/var \
         --sharedstatedir=/var/lib \
         --mandir=/usr/share/man \
@@ -948,12 +950,6 @@ function _make_strict {
     retval=$(_shell _configure)
 
     retval=$(_shell make -j$(_num_cpus))
-
-    if [ ${retval} -eq 0 ]; then
-        _report_msg "make strict OK"
-    else
-        _report_msg "make strict FAILED"
-    fi
 
     # /srv/cyrus-imapd.git
     popd >&3
