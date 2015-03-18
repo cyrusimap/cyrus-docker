@@ -39,6 +39,12 @@ clean:
 		docker rmi -f $$image ; \
 	done
 
+really-clean:
+	for dist in $$(find . -mindepth 1 -maxdepth 1 -type f -exec basename {} \; | sort | grep -E '^[a-z]+$$'); do \
+		docker rmi cyrusimapd/$$dist ; \
+		docker rmi $$dist ; \
+	done
+
 centos: rhel
 
 debian: squeeze wheezy jessie sid
