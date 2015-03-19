@@ -1005,11 +1005,11 @@ function _shell {
     echo "Running $@ ..." >&3
     $@ >&3 2>&3 ; retval=$?
     if [ ${retval} -eq 0 ]; then
-        _report_msg "Running '$@' OK"
-        echo "Running $@ OK" >&3
+        _report_msg "Running '$@' OK (at $(git rev-parse HEAD))"
+        echo "Running $@ OK (at $(git rev-parse HEAD))" >&3
     else
-        _report_msg "Running '$@' FAILED"
-        echo "Running $@ FAILED" >&3
+        _report_msg "Running '$@' FAILED (at $(git rev-parse HEAD))"
+        echo "Running $@ FAILED (at $(git rev-parse HEAD))" >&3
     fi
 
     echo ${retval}
