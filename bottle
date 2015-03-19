@@ -22,7 +22,7 @@ RUN zypper in -y \
     libdb-4_8-devel \
     libical-devel \
     libjansson-devel \
-    libmysqld-devel \
+    libmysqlclient-devel \
     libopenssl-devel \
     libtool \
     libuuid-devel \

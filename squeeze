@@ -27,6 +27,7 @@ RUN apt-get update && apt-get -y install \
     libio-socket-inet6-perl \
     libio-stringy-perl \
     libldap2-dev \
+    libmysqlclient-dev \
     libnet-server-perl \
     libnews-nntpclient-perl \
     libpam0g-dev \

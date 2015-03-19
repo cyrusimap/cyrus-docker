@@ -29,6 +29,7 @@ RUN apt-get update && apt-get -y install \
     libio-stringy-perl \
     libjansson-dev \
     libldap2-dev \
+    libmysqlclient-dev \
     libnet-server-perl \
     libnews-nntpclient-perl \
     libpam0g-dev \
