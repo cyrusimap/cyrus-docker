@@ -16,6 +16,7 @@ RUN yum -y install \
     db4-devel \
     flex \
     gcc \
+    gcc-c++ \
     git \
     gperf \
     glib2-devel \

@@ -10,6 +10,7 @@ RUN apt-get update && apt-get -y install \
     comerr-dev \
     debhelper \
     flex \
+    g++ \
     git \
     gperf \
     groff \

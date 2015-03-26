@@ -15,6 +15,7 @@ RUN zypper in -y \
     file \
     flex \
     gcc \
+    gcc-c++ \
     git \
     glib2-devel \
     gperf \

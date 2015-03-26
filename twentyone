@@ -13,6 +13,7 @@ RUN yum clean all && yum -y install \
     file \
     flex \
     gcc \
+    gcc-c++ \
     git \
     glib2-devel \
     gperf \
