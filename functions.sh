@@ -30,6 +30,23 @@ unset nopts
 declare -a dnopts
 declare -a nopts
 
+dnopts[${#dnopts[@]}]="bottle"      ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="harlequin"   ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="heisenbug"   ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="jessie"      ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="maipo"       ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="precise"     ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="rawhide"     ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="santiago"    ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="sid"         ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="squeeze"     ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="trusty"      ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="tumbleweed"  ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="twentyone"   ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="utopic"      ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="vivid"       ;   nopts[${#nopts[@]}]="--enable-xapian"
+dnopts[${#dnopts[@]}]="wheezy"      ;   nopts[${#nopts[@]}]="--enable-xapian"
+
 # opensuse 13.1 (bottle) does not have cunit-devel packages
 dnopts[${#dnopts[@]}]="bottle"      ;   nopts[${#nopts[@]}]="--enable-unit-tests"
 
@@ -315,7 +332,9 @@ function _cassandane {
         --enable-murder \
         --enable-nntp \
         --enable-replication \
+        --enable-shared \
         --enable-unit-tests \
+        --enable-xapian \
         --with-ldap=/usr)
 
     retval=$(_shell make -j$(_num_cpus))
@@ -425,7 +444,9 @@ function _configure {
                 --enable-murder \
                 --enable-nntp \
                 --enable-replication \
+                --enable-shared \
                 --enable-unit-tests \
+                --enable-xapian \
                 --with-ldap=/usr"
     elif [ ! -z "$1" ]; then
         configure_opts="$@"
