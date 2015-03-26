@@ -296,12 +296,6 @@ function _cassandane {
 
     pushd /srv/cyrus-imapd.git >&3
 
-    # Surely this doesn't fail?
-    retval=$(_shell make clean)
-
-    # Re-configure, no exit code checking, we've already run this.
-    retval=$(_shell _configure_maintainer)
-
     CFLAGS="-g -W -Wall -Wextra -Werror"
     export CFLAGS
 
@@ -336,6 +330,9 @@ function _cassandane {
         --enable-unit-tests \
         --enable-xapian \
         --with-ldap=/usr)
+
+    # Surely this doesn't fail?
+    retval=$(_shell make clean)
 
     retval=$(_shell make -j$(_num_cpus))
 
@@ -459,6 +456,7 @@ function _configure {
     if [ ${retval1} -eq 0 ]; then
         local _configure_options_real=$(_configure_options ${configure_opts})
         retval4=$(_shell ./configure ${_configure_options_real})
+        retval=$(_shell make clean)
         retval=$(_shell _make_lex_fix)
 
     # Older platforms, older autoconf, older libtool
@@ -925,14 +923,11 @@ function _make_relaxed {
     CFLAGS=""
     export CFLAGS
 
-    # Surely this doesn't fail?
-    retval=$(_shell make clean)
-
-    # Re-configure, no exit code checking, we've already run this.
-    retval=$(_shell _configure_maintainer)
-
     # Re-configure, no exit code checking, we've already run this.
     retval=$(_shell _configure)
+
+    # Surely this doesn't fail?
+    retval=$(_shell make clean)
 
     retval=$(_shell make -j$(_num_cpus))
 
