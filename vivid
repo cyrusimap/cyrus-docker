@@ -47,6 +47,7 @@ RUN apt-get update && apt-get -y install \
     libxml-xpath-perl \
     libxml2-dev \
     libwrap0-dev \
+    libxapian-dev \
     libzephyr-dev \
     lsb-base \
     net-tools \

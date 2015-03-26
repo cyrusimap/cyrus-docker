@@ -55,7 +55,8 @@ RUN yum clean all && yum -y install \
     valgrind-devel \
     vim-enhanced \
     wget \
-    words
+    words \
+    xapian-core-devel
 
 WORKDIR /tmp
 RUN wget https://cgit.cyrus.foundation/docker/plain/packages/twentyone.tar.gz && \

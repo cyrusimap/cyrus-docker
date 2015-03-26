@@ -27,6 +27,7 @@ RUN zypper in -y \
     libopenssl-devel \
     libtool \
     libuuid-devel \
+    libxapian-devel \
     libxml2-devel \
     make \
     net-snmp-devel \

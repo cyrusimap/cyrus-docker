@@ -57,7 +57,8 @@ RUN yum -y install \
     valgrind-devel \
     vim-enhanced \
     wget \
-    words
+    words \
+    xapian-core-devel
 
 WORKDIR /tmp
 RUN wget https://cgit.cyrus.foundation/docker/plain/packages/rawhide.tar.gz && \

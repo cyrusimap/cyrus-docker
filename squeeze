@@ -41,6 +41,7 @@ RUN apt-get update && apt-get -y install \
     libtool \
     libunix-syslog-perl \
     liburi-perl \
+    libxapian-dev \
     libxml-generator-perl \
     libxml-xpath-perl \
     libxml2-dev \
