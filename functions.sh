@@ -332,7 +332,7 @@ function _cassandane {
         --with-ldap=/usr)
 
     # Surely this doesn't fail?
-    retval=$(_shell make clean)
+    retval=$(_shell _make_clean)
 
     retval=$(_shell make -j$(_num_cpus))
 
@@ -451,12 +451,14 @@ function _configure {
 
     pushd /srv/cyrus-imapd.git >&3
 
+    retval=$(_shell _make_distclean)
+
     retval1=$(_shell autoreconf -vi)
 
     if [ ${retval1} -eq 0 ]; then
         local _configure_options_real=$(_configure_options ${configure_opts})
         retval4=$(_shell ./configure ${_configure_options_real})
-        retval=$(_shell make clean)
+        retval=$(_shell _make_clean)
         retval=$(_shell _make_lex_fix)
 
     # Older platforms, older autoconf, older libtool
@@ -469,7 +471,7 @@ function _configure {
             if [ ${retval3} -eq 0 ]; then
                 local _configure_options_real=$(_configure_options ${configure_opts})
                 retval4=$(_shell ./configure ${_configure_options_real})
-
+                retval=$(_shell _make_clean)
                 retval=$(_shell _make_lex_fix)
 
             # We're not interactive, so check the parent
@@ -565,6 +567,8 @@ function _configure_maintainer {
     retval4=0   # The actual configure command
 
     pushd /srv/cyrus-imapd.git >&3
+
+    retval=$(_shell _make_distclean)
 
     retval1=$(_shell autoreconf -vi)
 
@@ -848,6 +852,16 @@ function _make {
     return 0
 }
 
+function _make_clean {
+    [ ! -f xversion.h ] && return 0
+    make clean
+}
+
+function _make_distclean {
+    [ ! -f Makefile ] && return 0
+    make distclean
+}
+
 # Execute 'make-check'
 #
 # Return codes:
@@ -927,7 +941,7 @@ function _make_relaxed {
     retval=$(_shell _configure)
 
     # Surely this doesn't fail?
-    retval=$(_shell make clean)
+    retval=$(_shell _make_clean)
 
     retval=$(_shell make -j$(_num_cpus))
 
@@ -956,14 +970,11 @@ function _make_strict {
     CFLAGS="-g -W -Wall -Wextra -Werror"
     export CFLAGS
 
-    # Surely this doesn't fail?
-    retval=$(_shell make clean)
-
-    # Re-configure, no exit code checking, we've already run this.
-    retval=$(_shell _configure_maintainer)
-
     # Re-configure, no exit code checking, we've already run this.
     retval=$(_shell _configure)
+
+    # Surely this doesn't fail?
+    retval=$(_shell _make_clean)
 
     retval=$(_shell make -j$(_num_cpus))
 

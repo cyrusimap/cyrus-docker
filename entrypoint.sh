@@ -37,10 +37,10 @@ source /functions.sh
 # is required
 if [ ! -z "${CONFIGURE_OPTS}" ]; then
     configure_opts=${CONFIGURE_OPTS}
-    do_preconfig=1
 else
     configure_opts="
             --enable-autocreate \
+            --enable-calalarmd \
             --enable-coverage \
             --enable-gssapi \
             --enable-http \
@@ -49,10 +49,10 @@ else
             --enable-murder \
             --enable-nntp \
             --enable-replication \
+            --enable-shared \
             --enable-unit-tests \
+            --enable-xapian \
             --with-ldap=/usr"
-
-    do_preconfig=0
 fi
 
 if [ ! -z "${PHAB_CERT}" ]; then
