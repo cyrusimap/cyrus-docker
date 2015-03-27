@@ -334,9 +334,6 @@ function _cassandane {
         --enable-xapian \
         --with-ldap=/usr)
 
-    # Surely this doesn't fail?
-    retval=$(_shell _make_clean)
-
     retval=$(_shell make -j$(_num_cpus))
 
     if [ ${retval} -ne 0 ]; then
@@ -947,9 +944,6 @@ function _make_relaxed {
     # Re-configure, no exit code checking, we've already run this.
     retval=$(_shell _configure)
 
-    # Surely this doesn't fail?
-    retval=$(_shell _make_clean)
-
     retval=$(_shell make -j$(_num_cpus))
 
     popd >&3
@@ -973,9 +967,6 @@ function _make_strict {
 
     # Re-configure, no exit code checking, we've already run this.
     retval=$(_shell _configure)
-
-    # Surely this doesn't fail?
-    retval=$(_shell _make_clean)
 
     retval=$(_shell make -j$(_num_cpus))
 
