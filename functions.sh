@@ -945,12 +945,6 @@ function _make_relaxed {
 
     retval=$(_shell make -j$(_num_cpus))
 
-    if [ ${retval} -eq 0 ]; then
-        _report_msg "make relaxed OK"
-    else
-        _report_msg "make relaxed FAILED"
-    fi
-
     popd >&3
 
     return ${retval}
