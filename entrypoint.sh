@@ -130,12 +130,6 @@ fi
 #
 # This is the actual legwork
 #
-if [ ${do_preconfig} -eq 1 ]; then
-    echo "Performing pre-configuration ..."
-    _configure_maintainer || \
-        commit_raise_concern --step "pre-configure" --severity $?
-fi
-
 _configure || \
     commit_raise_concern --step "configure" --severity $?
 
