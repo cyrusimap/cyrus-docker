@@ -992,7 +992,7 @@ function _make_lex_fix {
         retval=$(_shell make sieve/addr-lex.c sieve/sieve-lex.c)
     fi
 
-    retval=$(_shell make lex-fix)
+    make lex-fix; retval=$?
 
     # 2.5'ism
     if [ ${retval} -ne 0 ]; then
