@@ -94,6 +94,8 @@ if [ ! -z "${PS1}" ]; then
         PS1='[\u@${IMAGE} \W$(__git_ps1 " (%s)")]\$ '
     fi
 
+    export PS1
+
     PROMPT_COMMAND="echo -ne '\033]0;${IMAGE} (in ${HOSTNAME})\007'"
 
     if [ -f "/usr/share/git-core/contrib/completion/git-prompt.sh" ]; then
@@ -318,6 +320,7 @@ function _cassandane {
         --with-cyrus-prefix=/usr/bin/ \
         --with-service-path=/usr/bin/ \
         --enable-autocreate \
+        --enable-calalarmd \
         --enable-coverage \
         --enable-gssapi \
         --enable-http \
@@ -359,6 +362,7 @@ function _cassandane {
             --with-cyrus-prefix=/usr/bin/ \
             --with-service-path=/usr/bin/ \
             --enable-autocreate \
+            --enable-calalarmd \
             --enable-coverage \
             --enable-gssapi \
             --enable-http \
@@ -433,6 +437,7 @@ function _configure {
     if [ -z "$1" -a -z "${configure_opts}" ]; then
         configure_opts="
                 --enable-autocreate \
+                --enable-calalarmd \
                 --enable-coverage \
                 --enable-gssapi \
                 --enable-http \
@@ -854,12 +859,14 @@ function _make {
 
 function _make_clean {
     [ ! -f xversion.h ] && return 0
-    make clean
+    make clean || :
+    return 0
 }
 
 function _make_distclean {
     [ ! -f Makefile ] && return 0
-    make distclean
+    make distclean || :
+    return 0
 }
 
 # Execute 'make-check'
@@ -1016,6 +1023,7 @@ function _report {
 }
 
 function _report_msg {
+    printf "%*s" $(( ${BASH_SUBSHELL} * 4 )) " " >> ${TMPDIR:-/tmp}/report.log
     echo "$@" >> ${TMPDIR:-/tmp}/report.log
 }
 
