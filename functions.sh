@@ -76,6 +76,24 @@ dnfuncs[${#dnfuncs[@]}]="tumbleweed";   nfuncs[${#nfuncs[@]}]="_cassandane"
 # can output data without the caller getting the input.
 exec 3>&1
 
+function get_git {
+    branch=$3
+    if [ -z $branch ]; then
+        branch=master
+    fi
+    if [ ! -d "${1}" ]; then
+        git clone -b $branch "${2}" "${1}" || (
+            git config --global http.sslverify false
+            git clone -b $branch "${2}" "${1}"
+        )
+    else
+        cd ${1}
+        git remote set-url origin "${2}"
+        git fetch origin
+        git reset --hard origin/$branch
+    fi
+}
+
 # If PS1 is set, we're interactive
 if [ ! -z "${PS1}" ]; then
     # Set a sensible prompt
@@ -103,35 +121,10 @@ if [ ! -z "${PS1}" ]; then
     fi
 
     # Just so everyone knows where they are, git fetch origin
-    if [ ! -d "/srv/cyrus-imapd.git" ]; then
-        git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
-                git config --global http.sslverify false
-                git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git
-            )
-    else
-        pushd /srv/cyrus-imapd.git >&3
-        git remote set-url origin https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
-        git fetch origin
-        git reset --hard origin/master
-
-        # /srv/cyrus-imapd.git
-        popd >&3
-    fi
-
-    if [ ! -d "/srv/cassandane.git" ]; then
-        git clone https://git.cyrus.foundation/diffusion/C/cassandane.git /srv/cassandane.git || (
-                git config --global http.sslverify false
-                git clone https://git.cyrus.foundation/diffusion/C/cassandane.git /srv/cassandane.git
-            )
-    else
-        pushd /srv/cassandane.git
-        git remote set-url origin https://git.cyrus.foundation/diffusion/C/cassandane.git
-        git fetch origin
-        git reset --hard origin/master
-
-        # /srv/cassandane.git
-        popd >&3
-    fi
+    get_git /srv/cyrus-imapd.git https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
+    get_git /srv/cassandane.git https://git.cyrus.foundation/diffusion/C/cassandane.git
+    get_git /srv/libical.git https://github.com/cyrusimap/libical.git
+    get_git /srv/xapian.git https://github.com/cyrusimap/xapian.git cyrus
 fi
 
 function apply_differential {

@@ -5,33 +5,14 @@ if [ ! -z "$PS1" ]; then
     . /etc/bashrc
 fi
 
-if [ ! -d "/srv/cyrus-imapd.git" ]; then
-    git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git || (
-            git config --global http.sslverify false
-            git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git /srv/cyrus-imapd.git
-        )
-else
-    cd /srv/cyrus-imapd.git
-    git remote set-url origin https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
-    git fetch origin
-    git reset --hard origin/master
-fi
+source /functions.sh
 
-if [ ! -d "/srv/cassandane.git" ]; then
-    git clone https://git.cyrus.foundation/diffusion/C/cassandane.git /srv/cassandane.git || (
-            git config --global http.sslverify false
-            git clone https://git.cyrus.foundation/diffusion/C/cassandane.git /srv/cassandane.git
-        )
-else
-    cd /srv/cassandane.git
-    git remote set-url origin https://git.cyrus.foundation/diffusion/C/cassandane.git
-    git fetch origin
-    git reset --hard origin/master
-fi
+get_git /srv/cyrus-imapd.git https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
+get_git /srv/cassandane.git https://git.cyrus.foundation/diffusion/C/cassandane.git
+get_git /srv/libical.git https://github.com/cyrusimap/libical.git
+get_git /srv/xapian.git https://github.com/cyrusimap/xapian.git cyrus
 
 cd $HOME
-
-source /functions.sh
 
 # Note, since all this builds from GIT, --enable-maintainer-mode
 # is required
