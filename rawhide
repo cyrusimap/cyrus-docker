@@ -61,17 +61,28 @@ RUN yum -y install \
     xapian-core-devel
 
 WORKDIR /tmp
-RUN wget https://cgit.cyrus.foundation/docker/plain/packages/rawhide.tar.gz && \
+RUN wget https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/packages/rawhide.tar.gz && \
     tar zxvf rawhide.tar.gz && \
     yum --nogpgcheck -y localinstall rawhide/*.rpm && \
     rm -rf /tmp/*
 
 WORKDIR /srv
-RUN git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cyrus-imapd.git \
     cyrus-imapd.git
 
-RUN git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cassandane.git \
     cassandane.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/xapian.git \
+    xapian.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/libical.git \
+    libical.git
+
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
@@ -81,11 +92,11 @@ RUN groupadd -r saslauth ; \
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
 ENV IMAGE rawhide
-ADD https://cgit.cyrus.foundation/docker/plain/.bashrc /root/.bashrc
-ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.bashrc /root/.bashrc
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.vimrc /root/.vimrc
 
 WORKDIR /
-ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
-ADD https://cgit.cyrus.foundation/docker/plain/functions.sh /
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/entrypoint.sh /
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/functions.sh /
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]

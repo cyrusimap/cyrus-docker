@@ -74,12 +74,21 @@ RUN sed -r -i \
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
-    git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+    git clone https://github.com/cyrusimap/cyrus-imapd.git \
     cyrus-imapd.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
+    git clone https://github.com/cyrusimap/cassandane.git \
     cassandane.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/xapian.git \
+    xapian.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/libical.git \
+    libical.git
+
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
@@ -89,11 +98,11 @@ RUN groupadd -r saslauth ; \
 WORKDIR /root
 ENV PATH /srv/arcanist/bin/:$PATH
 ENV IMAGE squeeze
-ADD https://cgit.cyrus.foundation/docker/plain/.bashrc /root/.bashrc
-ADD https://cgit.cyrus.foundation/docker/plain/.vimrc /root/.vimrc
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.bashrc /root/.bashrc
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.vimrc /root/.vimrc
 
 WORKDIR /
-ADD https://cgit.cyrus.foundation/docker/plain/entrypoint.sh /
-ADD https://cgit.cyrus.foundation/docker/plain/functions.sh /
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/entrypoint.sh /
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/functions.sh /
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]

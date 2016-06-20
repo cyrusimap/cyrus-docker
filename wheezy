@@ -72,12 +72,20 @@ RUN sed -r -i \
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
-    git clone https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git \
+    git clone https://github.com/cyrusimap/cyrus-imapd.git \
     cyrus-imapd.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://git.cyrus.foundation/diffusion/C/cassandane.git \
+    git clone https://github.com/cyrusimap/cassandane.git \
     cassandane.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/xapian.git \
+    xapian.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/libical.git \
+    libical.git
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \

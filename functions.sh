@@ -121,8 +121,8 @@ if [ ! -z "${PS1}" ]; then
     fi
 
     # Just so everyone knows where they are, git fetch origin
-    get_git /srv/cyrus-imapd.git https://git.cyrus.foundation/diffusion/I/cyrus-imapd.git
-    get_git /srv/cassandane.git https://git.cyrus.foundation/diffusion/C/cassandane.git
+    get_git /srv/cyrus-imapd.git https://github.com/cyrusimap/cyrus-imapd.git
+    get_git /srv/cassandane.git https://github.com/cyrusimap/cassandane.git
     get_git /srv/libical.git https://github.com/cyrusimap/libical.git
     get_git /srv/xapian.git https://github.com/cyrusimap/xapian.git cyrus
 fi
