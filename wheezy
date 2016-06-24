@@ -32,6 +32,7 @@ RUN apt-get update && apt-get -y install \
     libio-stringy-perl \
     libjansson-dev \
     libldap2-dev \
+    libmagic-dev \
     libmilter-dev \
     libmysqlclient-dev \
     libnet-server-perl \
