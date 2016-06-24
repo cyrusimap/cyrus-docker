@@ -1,5 +1,5 @@
 FROM centos:centos5
-MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+MAINTAINER Cyrus Works <docker@cyrus.works>
 RUN yum -y install epel-release
 RUN yum clean all
 RUN yum -y update

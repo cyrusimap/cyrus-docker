@@ -1,5 +1,5 @@
 FROM opensuse:tumbleweed
-MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+MAINTAINER Cyrus Works <docker@cyrus.works>
 RUN zypper --non-interactive --gpg-auto-import-keys ref
 RUN zypper in -y \
     automake \

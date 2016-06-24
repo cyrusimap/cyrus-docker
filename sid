@@ -1,5 +1,5 @@
 FROM debian:sid
-MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+MAINTAINER Cyrus Works <docker@cyrus.works>
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \

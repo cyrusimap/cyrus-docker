@@ -1,5 +1,5 @@
 FROM fedora:heisenbug
-MAINTAINER Cyrus Foundation <docker@cyrus.foundation>
+MAINTAINER Cyrus Works <docker@cyrus.works>
 RUN yum clean all && yum -y install \
     automake \
     autoconf \
