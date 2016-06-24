@@ -1024,29 +1024,3 @@ function _shell {
 
     echo ${retval}
 }
-
-function _test_differentials {
-    pushd /srv/cyrus-imapd.git >&3
-
-    if [ -z "${PHAB_CERT}" ]; then
-        return 0
-    fi
-
-    ids=$(echo "{\"status\":\"status-open\",\"paths\":[[\"I\",\"\"]]}" | \
-        arc call-conduit differential.query | \
-        python -mjson.tool | \
-        sed -r \
-            -e '/^\s+"id":\s*"[0-9]+",$/!d' \
-            -e 's/^\s+"id":\s*"([0-9]+)",/\1/g' | \
-        sort --version-sort)
-
-    for id in ${ids}; do
-        git clean -d -f -x
-        git reset --hard origin/master
-
-        retval=$(_shell apply_differential ${id})
-    done
-
-    # /srv/cyrus-imapd.git
-    popd >&3
-}
