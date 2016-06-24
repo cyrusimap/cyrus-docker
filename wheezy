@@ -7,6 +7,7 @@ RUN apt-get update && apt-get -y install \
     bash-completion \
     bison \
     build-essential \
+    cmake \
     comerr-dev \
     debhelper \
     flex \
@@ -15,6 +16,7 @@ RUN apt-get update && apt-get -y install \
     gperf \
     groff \
     heimdal-dev \
+    libbsd-dev \
     libbsd-resource-perl \
     libclone-perl \
     libconfig-inifiles-perl \
@@ -30,6 +32,7 @@ RUN apt-get update && apt-get -y install \
     libio-stringy-perl \
     libjansson-dev \
     libldap2-dev \
+    libmilter-dev \
     libmysqlclient-dev \
     libnet-server-perl \
     libnews-nntpclient-perl \
@@ -56,6 +59,7 @@ RUN apt-get update && apt-get -y install \
     php5-curl \
     pkg-config \
     po-debconf \
+    sudo \
     tcl-dev \
     transfig \
     uuid-dev \
@@ -80,12 +84,11 @@ RUN git config --global http.sslverify false && \
     cassandane.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/xapian.git \
-    xapian.git
+    git clone https://github.com/cyrusimap/cyruslibs.git \
+    cyruslibs.git
 
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/libical.git \
-    libical.git
+WORKDIR /srv/cyruslibs.git
+RUN git fetch; git rebase origin/master; git submodule init; git submodule update
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
@@ -93,7 +96,6 @@ RUN groupadd -r saslauth ; \
     -g mail -G saslauth -s /bin/bash -r cyrus
 
 WORKDIR /root
-ENV PATH /srv/arcanist/bin/:$PATH
 ENV IMAGE wheezy
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.bashrc /root/.bashrc
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.vimrc /root/.vimrc
