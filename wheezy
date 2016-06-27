@@ -9,13 +9,16 @@ RUN apt-get update && apt-get -y install \
     build-essential \
     cmake \
     comerr-dev \
+    doxygen \
     debhelper \
     flex \
     g++ \
     git \
     gperf \
+    graphviz \
     groff \
     heimdal-dev \
+    help2man \
     libbsd-dev \
     libbsd-resource-perl \
     libclone-perl \
@@ -60,6 +63,7 @@ RUN apt-get update && apt-get -y install \
     php5-curl \
     pkg-config \
     po-debconf \
+    python-docutils \
     sudo \
     tcl-dev \
     transfig \
@@ -90,6 +94,7 @@ RUN git config --global http.sslverify false && \
 
 WORKDIR /srv/cyruslibs.git
 RUN git fetch; git rebase origin/master; git submodule init; git submodule update
+RUN bash build.sh
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
