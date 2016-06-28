@@ -1,5 +1,7 @@
 FROM debian:wheezy
 MAINTAINER Cyrus Works <docker@cyrus.works>
+#RUN echo 'deb http://10.50.0.2:9999/debian wheezy main contrib non-free' > /etc/apt/sources.list
+#RUN echo 'deb http://10.50.0.2:9999/security wheezy/updates main contrib non-free' >> /etc/apt/sources.list
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
@@ -19,6 +21,7 @@ RUN apt-get update && apt-get -y install \
     groff \
     heimdal-dev \
     help2man \
+    libanyevent-perl \
     libbsd-dev \
     libbsd-resource-perl \
     libclone-perl \
@@ -30,10 +33,10 @@ RUN apt-get update && apt-get -y install \
     libencode-imaputf7-perl \
     libfile-chdir-perl \
     libglib2.0-dev \
-    libical-dev \
     libio-socket-inet6-perl \
     libio-stringy-perl \
-    libjansson-dev \
+    libjson-perl \
+    libjson-xs-perl \
     libldap2-dev \
     libmagic-dev \
     libmilter-dev \
@@ -116,15 +119,14 @@ RUN ./autogen.sh
 RUN ./configure
 RUN make -j 8
 
-WORKDIR /src/imaptest.git
-RUN ./autogen.sh
+WORKDIR /srv/imaptest.git
+RUN sh autogen.sh
 RUN ./configure --with-dovecot=/srv/dovecot.git
 RUN make -j 8
+# run once to make the .libs
+RUN src/imaptest || true
 
 # XXX - we'll be making caldavtester here
-
-WORKDIR /srv/cassandane.git
-RUN make
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
@@ -133,6 +135,9 @@ RUN groupadd -r saslauth ; \
 
 RUN mkdir /tmp/cass
 RUN chown cyrus /tmp/cass
+
+WORKDIR /srv/cassandane.git
+RUN make
 
 WORKDIR /root
 ENV IMAGE wheezy
