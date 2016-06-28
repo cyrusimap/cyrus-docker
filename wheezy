@@ -79,6 +79,8 @@ RUN sed -r -i \
     -e 's/^set background=dark/"set background=dark/g' \
     /etc/vim/vimrc
 
+RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
+
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/cyrus-imapd.git \
@@ -92,14 +94,45 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/cyruslibs.git \
     cyruslibs.git
 
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/dovecot/core.git \
+    dovecot.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/dovecot/imaptest.git \
+    imaptest.git
+
 WORKDIR /srv/cyruslibs.git
-RUN git fetch; git rebase origin/master; git submodule init; git submodule update
-RUN bash build.sh
+RUN git submodule init
+RUN git submodule update
+RUN ./build.sh
+
+WORKDIR /srv/cyrus-imapd.git
+RUN tools/build-with-cyruslibs.sh
+
+WORKDIR /srv/dovecot.git
+RUN git checkout 2.2.24
+RUN ./autogen.sh
+RUN ./configure
+RUN make -j 8
+
+WORKDIR /src/imaptest.git
+RUN ./autogen.sh
+RUN ./configure --with-dovecot=/srv/dovecot.git
+RUN make -j 8
+
+# XXX - we'll be making caldavtester here
+
+WORKDIR /srv/cassandane.git
+RUN make
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
     useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
     -g mail -G saslauth -s /bin/bash -r cyrus
+
+RUN mkdir /tmp/cass
+RUN chown cyrus /tmp/cass
 
 WORKDIR /root
 ENV IMAGE wheezy
