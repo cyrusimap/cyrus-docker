@@ -1,6 +1,7 @@
 FROM debian:wheezy
 MAINTAINER Cyrus Works <docker@cyrus.works>
-RUN apt-get update && apt-get -y install \
+RUN apt-get update
+RUN apt-get -y install \
     autoconf \
     automake \
     autotools-dev \
@@ -42,7 +43,7 @@ RUN apt-get update && apt-get -y install \
     libencode-imaputf7-perl \
     libfile-chdir-perl \
     libglib2.0-dev \
-    libhttp-tiny-perl
+    libhttp-tiny-perl \
     libio-socket-inet6-perl \
     libio-stringy-perl \
     libjson-perl \
@@ -102,6 +103,10 @@ RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cyrus-docker.git \
+    cyrus-docker.git
+
+RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/cyrus-imapd.git \
     cyrus-imapd.git
 
@@ -154,11 +159,6 @@ RUN chown cyrus /tmp/cass
 
 WORKDIR /srv/cassandane.git
 RUN make
-
-WORKDIR /srv
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/cyrus-docker.git \
-    cyrus-docker.git
 
 WORKDIR /root
 ENV IMAGE wheezy

@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Fedora 21 does not invoke /etc/bashrc, thus giving you a weird PS1
-if [ ! -z "$PS1" ]; then
-    . /etc/bashrc
-fi
-
 source functions.sh
 
 get_git /srv/cyrus-imapd.git https://github.com/cyrusimap/cyrus-imapd.git
