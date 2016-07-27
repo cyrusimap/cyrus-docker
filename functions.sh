@@ -73,20 +73,7 @@ function _cassandane {
         return 0
     fi
 
-    cp -af cassandane.ini.example cassandane.ini
-
-    retval=$(_shell \
-            sed -r -i \
-                -e 's|^##rootdir.*$|rootdir=/tmp|g' \
-                -e 's|^##prefix.*$|prefix=/usr/cyrus|g' \
-                -e '/^#/d' \
-                cassandane.ini
-        )
-
-    sed -r -i \
-        -e '/"-A$af",/d' \
-        -e 's| -A$af 2>/dev/null| 2>/dev/null|g' \
-        Cassandane/Daemon.pm
+    cp -af cassandane.ini.dockertests cassandane.ini
 
     retval=$(_shell ./testrunner.pl -f tap -j $(_num_cpus))
 
