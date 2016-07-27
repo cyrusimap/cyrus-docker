@@ -160,6 +160,11 @@ RUN chown cyrus /tmp/cass
 WORKDIR /srv/cassandane.git
 RUN make
 
+WORKDIR /srv
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cyrus-docker.git \
+    cyrus-docker.git
+
 WORKDIR /root
 ENV IMAGE wheezy
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.bashrc /root/.bashrc
@@ -167,6 +172,5 @@ ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.vimrc /root
 
 WORKDIR /
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/entrypoint.sh /
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/functions.sh /
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]
