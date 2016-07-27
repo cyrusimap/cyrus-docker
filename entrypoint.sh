@@ -2,5 +2,5 @@
 
 cd /srv/cyrus-docker.git
 git pull -v
-sh testscript.sh
+./testscript.sh
 
