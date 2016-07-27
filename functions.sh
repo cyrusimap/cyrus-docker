@@ -113,6 +113,10 @@ function _cassandane {
     return ${retval}
 }
 
+function _num_cpus {
+    echo $(cat /proc/cpuinfo | grep ^processor | wc -l)
+}
+
 function _report {
     cat ${TMPDIR:-/tmp}/report.log
     rm -rf ${TMPDIR:-/tmp}/report.log
