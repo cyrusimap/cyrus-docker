@@ -1,7 +1,5 @@
 FROM debian:wheezy
 MAINTAINER Cyrus Works <docker@cyrus.works>
-#RUN echo 'deb http://10.50.0.2:9999/debian wheezy main contrib non-free' > /etc/apt/sources.list
-#RUN echo 'deb http://10.50.0.2:9999/security wheezy/updates main contrib non-free' >> /etc/apt/sources.list
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
@@ -27,12 +25,24 @@ RUN apt-get update && apt-get -y install \
     libclone-perl \
     libconfig-inifiles-perl \
     libcunit1-dev \
+    libdata-ical-perl \
     libdatetime-perl \
+    libdatetime-event-ical-perl \
+    libdatetime-format-builder-perl \
+    libdatetime-format-dateparse-perl \
+    libdatetime-format-duration-perl \
+    libdatetime-format-http-perl \
+    libdatetime-format-ical-perl \
+    libdatetime-format-iso8601-perl \
+    libdatetime-format-strptime-perl \
+    libdatetime-timezone-tzfile-perl \
+    libdatetime-timezone-perl \
     libdb-dev \
     libdigest-sha-perl \
     libencode-imaputf7-perl \
     libfile-chdir-perl \
     libglib2.0-dev \
+    libhttp-tiny-perl
     libio-socket-inet6-perl \
     libio-stringy-perl \
     libjson-perl \
@@ -40,6 +50,8 @@ RUN apt-get update && apt-get -y install \
     libldap2-dev \
     libmagic-dev \
     libmilter-dev \
+    libmime-types-perl \
+    libmodule-build-perl \
     libmysqlclient-dev \
     libnet-server-perl \
     libnews-nntpclient-perl \
@@ -49,11 +61,15 @@ RUN apt-get update && apt-get -y install \
     libsnmp-dev \
     libsqlite3-dev \
     libssl-dev \
+    libtest-deep-perl \
     libtest-unit-perl \
+    libtext-levenshteinxs-perl \
     libtool \
     libunix-syslog-perl \
     liburi-perl \
     libxml-generator-perl \
+    libxml-sax-perl \
+    libxml-sax-writer-perl \
     libxml-xpath-perl \
     libxml2-dev \
     libwrap0-dev \
@@ -76,27 +92,6 @@ RUN apt-get update && apt-get -y install \
     wget \
     xutils-dev \
     zlib1g-dev
-
-RUN apt-get -y install \
-    libdatetime-format-builder-perl \
-    libtest-deep-perl \
-    libdatetime-event-ical-perl \
-    libdatetime-format-dateparse-perl \
-    libdatetime-format-duration-perl \
-    libdatetime-format-http-perl \
-    libdatetime-format-ical-perl \
-    libdatetime-format-iso8601-perl \
-    libdatetime-format-strptime-perl \
-    libdatetime-timezone-tzfile-perl \
-    libdatetime-timezone-perl \
-    libdata-ical-perl \
-    libmodule-build-perl \
-    libtext-levenshteinxs-perl \
-    libmime-types-perl \
-    libxml-sax-perl \
-    libxml-sax-writer-perl \
-    libhttp-tiny-perl
-
 
 RUN sed -r -i \
     -e 's/^"([^ ]|\s{2})(.*)$/\1\2/g' \
@@ -167,8 +162,8 @@ RUN git config --global http.sslverify false && \
 
 WORKDIR /root
 ENV IMAGE wheezy
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.bashrc /root/.bashrc
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.vimrc /root/.vimrc
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.bashrc /root/.bashrc
 
 WORKDIR /
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/entrypoint.sh /
