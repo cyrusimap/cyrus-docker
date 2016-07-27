@@ -38,49 +38,41 @@ function get_git {
 }
 
 function _cassandane {
-    if [ $(_find_dnfunc '_cassandane'; echo $?) -ne 0 ]; then
-        echo "Skipping '_cassandane' on ${IMAGE}" >&3
-        _report_msg "Running '_cassandane' SKIPPED"
-        return 0
-    fi
-
     pushd /srv/cyrus-imapd.git >&3
 
     CFLAGS="-g -W -Wall -Wextra -Werror"
     export CFLAGS
 
-    CONFIGOPTS=\
-        --program-prefix= \
-        --disable-dependency-tracking \
-        --prefix=/usr \
-        --exec-prefix=/usr \
-        --bindir=/usr/bin \
-        --sbindir=/usr/sbin \
-        --sysconfdir=/etc \
-        --datadir=/usr/share \
-        --includedir=/usr/include \
-        --libdir=/usr/lib64 \
-        --libexecdir=/usr/libexec/cyrus-imapd \
-        --localstatedir=/var \
-        --sharedstatedir=/var/lib \
-        --mandir=/usr/share/man \
-        --infodir=/usr/share/info \
-        --with-cyrus-prefix=/usr/bin/ \
-        --with-service-path=/usr/bin/ \
-        --enable-autocreate \
-        --enable-calalarmd \
-        --enable-coverage \
-        --enable-gssapi \
-        --enable-http \
-        --enable-idled \
-        --enable-maintainer-mode \
-        --enable-murder \
-        --enable-nntp \
-        --enable-replication \
-        --enable-shared \
-        --enable-unit-tests \
-        --enable-xapian \
-        --with-ldap=/usr
+    CONFIGOPTS="
+        --program-prefix=
+        --disable-dependency-tracking
+        --prefix=/usr
+        --exec-prefix=/usr
+        --bindir=/usr/bin
+        --sbindir=/usr/sbin
+        --sysconfdir=/etc
+        --datadir=/usr/share
+        --includedir=/usr/include
+        --libdir=/usr/lib64
+        --libexecdir=/usr/libexec/cyrus-imapd
+        --localstatedir=/var
+        --sharedstatedir=/var/lib
+        --mandir=/usr/share/man
+        --infodir=/usr/share/info
+        --enable-autocreate
+        --enable-calalarmd
+        --enable-coverage
+        --enable-gssapi
+        --enable-http
+        --enable-idled
+        --enable-maintainer-mode
+        --enable-murder
+        --enable-nntp
+        --enable-replication
+        --enable-shared
+        --enable-unit-tests
+        --enable-xapian
+        --with-ldap=/usr"
 
     export CONFIGOPTS
 
