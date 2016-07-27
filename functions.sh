@@ -44,21 +44,7 @@ function _cassandane {
     export CFLAGS
 
     CONFIGOPTS="
-        --program-prefix=
         --disable-dependency-tracking
-        --prefix=/usr
-        --exec-prefix=/usr
-        --bindir=/usr/bin
-        --sbindir=/usr/sbin
-        --sysconfdir=/etc
-        --datadir=/usr/share
-        --includedir=/usr/include
-        --libdir=/usr/lib64
-        --libexecdir=/usr/libexec/cyrus-imapd
-        --localstatedir=/var
-        --sharedstatedir=/var/lib
-        --mandir=/usr/share/man
-        --infodir=/usr/share/info
         --enable-autocreate
         --enable-calalarmd
         --enable-coverage
@@ -92,7 +78,7 @@ function _cassandane {
     retval=$(_shell \
             sed -r -i \
                 -e 's|^##rootdir.*$|rootdir=/tmp|g' \
-                -e 's|^##prefix.*$|prefix=/usr|g' \
+                -e 's|^##prefix.*$|prefix=/usr/cyrus|g' \
                 -e '/^#/d' \
                 cassandane.ini
         )
