@@ -70,6 +70,8 @@ RUN sed -r -i \
     -e 's/^set background=dark/"set background=dark/g' \
     /etc/vim/vimrc
 
+RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
+
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/cyrus-imapd.git \
@@ -80,22 +82,53 @@ RUN git config --global http.sslverify false && \
     cassandane.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/xapian.git \
-    xapian.git
+    git clone https://github.com/cyrusimap/cyruslibs.git \
+    cyruslibs.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/libical.git \
-    libical.git
+    git clone https://github.com/dovecot/core.git \
+    dovecot.git
 
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/dovecot/imaptest.git \
+    imaptest.git
+
+WORKDIR /srv/cyruslibs.git
+RUN git submodule init
+RUN git submodule update
+RUN ./build.sh
+
+WORKDIR /srv/cyrus-imapd.git
+RUN tools/build-with-cyruslibs.sh
+
+WORKDIR /srv/dovecot.git
+RUN git checkout 2.2.24
+RUN ./autogen.sh
+RUN ./configure
+RUN make -j 8
+
+WORKDIR /srv/imaptest.git
+RUN sh autogen.sh
+RUN ./configure --with-dovecot=/srv/dovecot.git
+RUN make -j 8
+# XXX - we'll be making caldavtester here
+RUN src/imaptest || true
+
+# XXX - we'll be making caldavtester here
 
 RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
     useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
     -g mail -G saslauth -s /bin/bash -r cyrus
 
+RUN mkdir /tmp/cass
+RUN chown cyrus /tmp/cass
+
+WORKDIR /srv/cassandane.git
+RUN make
+
 WORKDIR /root
-ENV PATH /srv/arcanist/bin/:$PATH
-ENV IMAGE trusty
+ENV IMAGE jessie
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.bashrc /root/.bashrc
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/.vimrc /root/.vimrc
 
