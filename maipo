@@ -61,7 +61,7 @@ RUN yum -y install \
 RUN sed -r -i \
     -e 's/^"([^ ]|\s{2})(.*)$/\1\2/g' \
     -e 's/^set background=dark/"set background=dark/g' \
-    /etc/vim/vimrc
+    /etc/vimrc
 
 RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
 
