@@ -90,7 +90,7 @@ RUN git config --global http.sslverify false && \
     dovecot.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/dovecot/imaptest.git \
+    git clone https://github.com/cyrusimap/imaptest.git \
     imaptest.git
 
 WORKDIR /srv/cyruslibs.git
@@ -102,12 +102,12 @@ WORKDIR /srv/cyrus-imapd.git
 RUN tools/build-with-cyruslibs.sh
 
 WORKDIR /srv/dovecot.git
-RUN git checkout 2.2.24
 RUN ./autogen.sh
 RUN ./configure
 RUN make -j 8
 
 WORKDIR /srv/imaptest.git
+RUN git checkout cyrus
 RUN sh autogen.sh
 RUN ./configure --with-dovecot=/srv/dovecot.git
 RUN make -j 8
