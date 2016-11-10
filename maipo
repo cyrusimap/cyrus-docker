@@ -8,6 +8,7 @@ RUN yum -y install \
     bash-completion \
     bison \
     bzip2 \
+    cpan \
     CUnit-devel \
     cyrus-sasl-devel \
     cyrus-sasl-plain \
