@@ -59,6 +59,9 @@ RUN yum -y install \
     wget \
     words
 
+#Commands after the following line will not be cached when run via www.cyrus.works
+RUN echo "CyrusWorksCacheInvalidationString"
+
 WORKDIR /tmp
 RUN wget https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/packages/tikanga.tar.gz && \
     tar zxvf tikanga.tar.gz && \
