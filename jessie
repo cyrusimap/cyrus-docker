@@ -24,6 +24,7 @@ RUN apt-get update && apt-get -y install \
     libanyevent-perl \
     libbsd-dev \
     libbsd-resource-perl \
+    libclamav-dev \
     libclone-perl \
     libconfig-inifiles-perl \
     libcunit1-dev \
@@ -77,6 +78,8 @@ RUN apt-get update && apt-get -y install \
     wget \
     xutils-dev \
     zlib1g-dev
+
+RUN dpkg -l
 
 RUN sed -r -i \
     -e 's/^"([^ ]|\s{2})(.*)$/\1\2/g' \
