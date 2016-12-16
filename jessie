@@ -24,7 +24,6 @@ RUN apt-get update && apt-get -y install \
     libanyevent-perl \
     libbsd-dev \
     libbsd-resource-perl \
-    libclamav-dev \
     libclone-perl \
     libconfig-inifiles-perl \
     libcunit1-dev \
