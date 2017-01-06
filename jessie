@@ -96,6 +96,10 @@ RUN git config --global http.sslverify false && \
     cyrus-imapd.git
 
 RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cyrus-docker.git \
+    cyrus-docker.git
+
+RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/cassandane.git \
     cassandane.git
 
