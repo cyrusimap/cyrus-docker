@@ -115,6 +115,10 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/imaptest.git \
     imaptest.git
 
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/CalDAVTester.git \
+    caldavtester.git
+
 WORKDIR /srv/cyruslibs.git
 RUN git submodule init
 RUN git submodule update
