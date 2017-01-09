@@ -1,5 +1,6 @@
 FROM debian:jessie
 MAINTAINER Cyrus Works <docker@cyrus.works>
+
 #RUN echo 'deb http://10.50.0.2:9999/debian jessie main contrib non-free' > /etc/apt/sources.list
 #RUN echo 'deb http://10.50.0.2:9999/security jessie/updates main contrib non-free' >> /etc/apt/sources.list
 RUN apt-get update && apt-get -y install \
@@ -49,6 +50,7 @@ RUN apt-get update && apt-get -y install \
     libsnmp-dev \
     libsqlite3-dev \
     libssl-dev \
+    libstring-crc32-perl \
     libtest-unit-perl \
     libtool \
     libunix-syslog-perl \
@@ -85,10 +87,10 @@ RUN sed -r -i \
     -e 's/^set background=dark/"set background=dark/g' \
     /etc/vim/vimrc
 
-#Commands after the following line will not be cached when run via www.cyrus.works
-RUN echo "CyrusWorksCacheInvalidationString"
-
-RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk String::CRC32
+RUN groupadd -r saslauth ; \
+    groupadd -r mail ; \
+    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
+    -g mail -G saslauth -s /bin/bash -r cyrus
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
@@ -119,38 +121,45 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
-WORKDIR /srv/cyruslibs.git
-RUN git submodule init
-RUN git submodule update
-RUN ./build.sh
+RUN echo "CyrusWorksWeeklyInvalidationString"
 
-WORKDIR /srv/cyrus-imapd.git
-RUN tools/build-with-cyruslibs.sh
+RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
 
 WORKDIR /srv/dovecot.git
+RUN git fetch
+RUN git checkout origin/master
 RUN ./autogen.sh
 RUN ./configure
 RUN make -j 8
 
 WORKDIR /srv/imaptest.git
-RUN git checkout cyrus
+RUN git fetch
+RUN git checkout origin/cyrus
 RUN sh autogen.sh
 RUN ./configure --with-dovecot=/srv/dovecot.git
 RUN make -j 8
-# XXX - we'll be making caldavtester here
-RUN src/imaptest || true
 
-# XXX - we'll be making caldavtester here
+WORKDIR /srv/cyruslibs.git
+RUN git fetch
+RUN git checkout origin/master
+RUN git submodule init
+RUN git submodule update
+RUN ./build.sh
 
-RUN groupadd -r saslauth ; \
-    groupadd -r mail ; \
-    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
-    -g mail -G saslauth -s /bin/bash -r cyrus
+#Commands after the following line will not be cached when run via www.cyrus.works
+RUN echo "CyrusWorksCacheInvalidationString"
+
+WORKDIR /srv/cyrus-imapd.git
+RUN git fetch
+RUN git checkout origin/master
+RUN tools/build-with-cyruslibs.sh
 
 RUN mkdir /tmp/cass
 RUN chown cyrus /tmp/cass
 
 WORKDIR /srv/cassandane.git
+RUN git fetch
+RUN git checkout origin/master
 RUN make
 
 WORKDIR /root
