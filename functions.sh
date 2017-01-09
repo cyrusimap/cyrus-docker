@@ -26,11 +26,9 @@ function _cyrusbuild {
     export CFLAGS
 
     CONFIGOPTS="
-        --disable-dependency-tracking
         --enable-autocreate
         --enable-backup
         --enable-calalarmd
-        --enable-coverage
         --enable-gssapi
         --enable-http
         --enable-idled
@@ -39,6 +37,7 @@ function _cyrusbuild {
         --enable-nntp
         --enable-replication
         --enable-shared
+        --enable-silent-rules
         --enable-unit-tests
         --enable-xapian
         --with-ldap=/usr"
@@ -65,7 +64,7 @@ function _cassandane {
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
-    retval=$(_shell ./testrunner.pl -f tap -j $(_num_cpus))
+    retval=$(_shell ./testrunner.pl -f pretty -j $(_num_cpus))
 
     # /srv/cassandane.git
     popd >&3
