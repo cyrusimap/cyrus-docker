@@ -19,25 +19,7 @@
 # can output data without the caller getting the input.
 exec 3>&1
 
-function get_git {
-    branch=$3
-    if [ -z $branch ]; then
-        branch=master
-    fi
-    if [ ! -d "${1}" ]; then
-        git clone -b $branch "${2}" "${1}" || (
-            git config --global http.sslverify false
-            git clone -b $branch "${2}" "${1}"
-        )
-    else
-        cd ${1}
-        git remote set-url origin "${2}"
-        git fetch origin
-        git reset --hard origin/$branch
-    fi
-}
-
-function _cassandane {
+function _cyrusbuild {
     pushd /srv/cyrus-imapd.git >&3
 
     CFLAGS="-g -W -Wall -Wextra -Werror"
@@ -46,6 +28,7 @@ function _cassandane {
     CONFIGOPTS="
         --disable-dependency-tracking
         --enable-autocreate
+        --enable-backup
         --enable-calalarmd
         --enable-coverage
         --enable-gssapi
@@ -64,7 +47,14 @@ function _cassandane {
 
     retval=$(_shell tools/build-with-cyruslibs.sh)
 
-    pushd /srv/cassandane.git
+    # /srv/cyrus-imapd.git
+    popd >&3
+
+    return ${retval}
+}
+
+function _cassandane {
+    pushd /srv/cassandane.git >&3
 
     retval=$(_shell make)
 
@@ -78,9 +68,6 @@ function _cassandane {
     retval=$(_shell ./testrunner.pl -f tap -j $(_num_cpus))
 
     # /srv/cassandane.git
-    popd >&3
-
-    # /srv/cyrus-imapd.git
     popd >&3
 
     return ${retval}
