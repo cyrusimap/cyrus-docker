@@ -70,16 +70,12 @@ function _cassandane {
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
-    retval=$(_shell ./testrunner.pl -f pretty -j $(_num_cpus) \!Metronome)
+    retval=$(_shell ./testrunner.pl -f pretty -j 4)
 
     # /srv/cassandane.git
     popd >&3
 
     return ${retval}
-}
-
-function _num_cpus {
-    echo $(cat /proc/cpuinfo | grep ^processor | wc -l)
 }
 
 function _report {
