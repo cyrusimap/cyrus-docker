@@ -80,6 +80,7 @@ function _cassandane {
 
 function _report {
     cat ${TMPDIR:-/tmp}/report.log
+    [ -d "/CyrusWorksLogs/" ] && cp -R ${TMPDIR:-/tmp}/CyrusWorksLogs/
     rm -rf ${TMPDIR:-/tmp}/report.log
 }
 
