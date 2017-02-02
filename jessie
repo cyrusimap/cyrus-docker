@@ -123,7 +123,7 @@ RUN git config --global http.sslverify false && \
 
 RUN echo "CyrusWorksWeeklyInvalidationString"
 
-RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
+RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk Term::ReadLine
 
 WORKDIR /srv/dovecot.git
 RUN git fetch
