@@ -4,3 +4,4 @@ source functions.sh
 
 _cyrusbuild
 _cassandane
+_report
