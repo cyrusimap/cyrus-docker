@@ -80,7 +80,7 @@ function _cassandane {
 
 function _report {
     cat ${TMPDIR:-/tmp}/report.log
-    [ -d "/CyrusWorksLogs/" ] && sudo cp -R ${TMPDIR:-/tmp} /CyrusWorksLogs/
+    [ -d "/CyrusWorksLogs/" ] && sudo cp -R ${TMPDIR:-/tmp} /CyrusWorksLogs/$CYRUSWORKS_BUILD/
     rm -rf ${TMPDIR:-/tmp}/report.log
 }
 
