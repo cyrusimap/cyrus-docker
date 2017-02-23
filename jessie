@@ -1,8 +1,8 @@
 FROM debian:jessie
 MAINTAINER Cyrus Works <docker@cyrus.works>
 
-#RUN echo 'deb http://10.50.0.2:9999/debian jessie main contrib non-free' > /etc/apt/sources.list
-#RUN echo 'deb http://10.50.0.2:9999/security jessie/updates main contrib non-free' >> /etc/apt/sources.list
+echo ${CyrusWorksManualInvalidationString}
+
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
