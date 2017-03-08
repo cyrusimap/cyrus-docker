@@ -43,6 +43,7 @@ function _cyrusbuild {
         --enable-silent-rules
         --enable-unit-tests
         --enable-xapian
+        --enable-jmap
         --with-ldap=/usr"
 
     export CONFIGOPTS
