@@ -3,6 +3,9 @@ MAINTAINER Cyrus Works <docker@cyrus.works>
 
 RUN echo "CyrusWorksManualCacheInvalidationString"
 
+echo "deb http://ftp.debian.org/debian jessie-backports main" >> /etc/apt/sources.list.d/sources.list
+apt-get -t jessie-backports install "cmake"
+
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
