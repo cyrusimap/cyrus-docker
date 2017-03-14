@@ -82,7 +82,7 @@ RUN apt-get update && apt-get -y install \
     xutils-dev \
     zlib1g-dev
 
-RUN apt-get -t jessie-backports install "cmake"
+RUN apt-get -t jessie-backports install "cmake" -y
 
 RUN dpkg -l
 
