@@ -22,7 +22,7 @@ exec 3>&1
 function _cyrusbuild {
     pushd /srv/cyrus-imapd.git >&3
     git fetch
-    git checkout origin/master
+    git checkout ${CYRUSBRANCH:origin/master}
     git clean -f -x -d
 
     CFLAGS="-g -W -Wall -Wextra -Werror"
