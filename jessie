@@ -45,6 +45,7 @@ RUN apt-get update && apt-get -y install \
     libmilter-dev \
     libmysqlclient-dev \
     libnet-server-perl \
+    libnet-snmp-perl \
     libnews-nntpclient-perl \
     libpam0g-dev \
     libpcre3-dev \
