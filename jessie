@@ -45,7 +45,6 @@ RUN apt-get update && apt-get -y install \
     libmilter-dev \
     libmysqlclient-dev \
     libnet-server-perl \
-    libnet-snmp-perl \
     libnews-nntpclient-perl \
     libpam0g-dev \
     libpcre3-dev \
@@ -133,6 +132,8 @@ RUN echo "CyrusWorksWeeklyInvalidationString"
 RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
 
 RUN cpan Math::Int64
+
+RUN cpan -l
 
 WORKDIR /srv/dovecot.git
 RUN git fetch
