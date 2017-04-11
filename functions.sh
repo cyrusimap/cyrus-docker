@@ -59,7 +59,7 @@ function _cyrusbuild {
 function _cassandane {
     pushd /srv/cassandane.git >&3
     git fetch
-    git checkout origin/master
+    git checkout ${CASSANDANEBRANCH:-"origin/master"}
     git clean -f -x -d
 
     retval=$(_shell make)
@@ -71,7 +71,7 @@ function _cassandane {
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
-    retval=$(_shell ./testrunner.pl -f pretty -j 4)
+    retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
     # /srv/cassandane.git
     popd >&3
