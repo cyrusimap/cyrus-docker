@@ -35,6 +35,7 @@ RUN apt-get update && apt-get -y install \
     libdigest-sha-perl \
     libencode-imaputf7-perl \
     libfile-chdir-perl \
+    libfile-slurp-perl \
     libglib2.0-dev \
     libio-socket-inet6-perl \
     libio-stringy-perl \
