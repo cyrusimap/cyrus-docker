@@ -1,7 +1,7 @@
 FROM debian:jessie
 MAINTAINER Cyrus Works <docker@cyrus.works>
 
-RUN echo "CyrusWorksManualCacheInvalidationString"
+RUN echo "CyrusWorksManualCacheInvalidationString000001"
 
 RUN echo "deb http://ftp.debian.org/debian jessie-backports main" >> /etc/apt/sources.list.d/sources.list
 
