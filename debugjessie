@@ -103,7 +103,9 @@ RUN git config --global http.sslverify false && \
     cyrus-imapd.git
 
 
-RUN git checkout 7ee7c0ca6755bcb534bcf9b981c19500346fcc5d
+
+
+RUN git -C /srv/cyrus-imapd.git checkout 7ee7c0ca6755bcb534bcf9b981c19500346fcc5d
 
 
 
@@ -122,9 +124,11 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/cassandane.git \
     cassandane.git
 
-RUN git checkout e40a8eeae6366807f2337ae7fbb713b2b037ad88
 
 
+
+
+RUN git -C /srv/cassandane.git checkout e40a8eeae6366807f2337ae7fbb713b2b037ad88
 
 
 
@@ -139,8 +143,8 @@ RUN git config --global http.sslverify false && \
     cyruslibs.git
     
     
-RUN git checkout b988a3d68b7b69684042740ad014d052822f1d14    
-    
+RUN git -C /srv/cyruslibs.git checkout b988a3d68b7b69684042740ad014d052822f1d14
+  
     
     
     
