@@ -136,8 +136,10 @@ RUN echo "CyrusWorksWeeklyInvalidationString"
 
 
 
-RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Convert::Base64 #  Mail::JMAPTalk Using https://github.com/rsto/Mail-JMAPTalk for now
 
+
+RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk#  Mail::JMAPTalk Using https://github.com/rsto/Mail-JMAPTalk for now
+RUN cpan Convert::Base64 File::LibMagic;
 
 
 WORKDIR /srv
