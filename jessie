@@ -130,7 +130,29 @@ RUN cpan Term::ReadLine
 
 RUN echo "CyrusWorksWeeklyInvalidationString"
 
-RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Mail::JMAPTalk
+
+
+
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/rsto/Mail-JMAPTalk \
+    Mail-JMAPTalk.git
+    
+RUN cd /Mail-JMAPTalk.git
+RUN perl Makefile.PL
+RUN make
+RUN make test
+RUN make install
+
+
+
+
+RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk #  Mail::JMAPTalk Using https://github.com/rsto/Mail-JMAPTalk for now
+
+
+
+
+
 
 RUN cpan Math::Int64
 
