@@ -137,14 +137,14 @@ RUN echo "CyrusWorksWeeklyInvalidationString"
 
 
 
-#  Mail::JMAPTalk Using https://github.com/rsto/Mail-JMAPTalk for now
+
 RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
 RUN cpan Convert::Base64 File::LibMagic;
 
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/rsto/Mail-JMAPTalk \
+    git clone https://github.com/cyrusimap/Mail-JMAPTalk.git \
     Mail-JMAPTalk.git
     
 WORKDIR /srv/Mail-JMAPTalk.git
