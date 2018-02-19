@@ -12,6 +12,7 @@ RUN apt-get update && apt-get -y install \
     bash-completion \
     bison \
     build-essential \
+    clang \
     cmake \
     comerr-dev \
     doxygen \
