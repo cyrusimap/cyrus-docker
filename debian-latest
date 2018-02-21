@@ -45,7 +45,7 @@ RUN apt-get update && apt-get -y install \
     libldap2-dev \
     libmagic-dev \
     libmilter-dev \
-    libmysqlclient-dev \
+    default-libmysqlclient-dev \
     libnet-server-perl \
     libnews-nntpclient-perl \
     libpam0g-dev \
@@ -69,8 +69,8 @@ RUN apt-get update && apt-get -y install \
     net-tools \
     pandoc \
     perl \
-    php5-cli \
-    php5-curl \
+    php-cli \
+    php-curl \
     pkg-config \
     po-debconf \
     python-docutils \
