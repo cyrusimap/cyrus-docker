@@ -127,6 +127,11 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/fastmail/JMAP-TestSuite.git \
+    jmaptest.git
+
+
 RUN cpan Term::ReadLine
 
 RUN echo "CyrusWorksWeeklyInvalidationString"
