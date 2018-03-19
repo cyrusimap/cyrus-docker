@@ -48,6 +48,7 @@ RUN apt-get update && apt-get -y install \
     default-libmysqlclient-dev \
     libnet-server-perl \
     libnews-nntpclient-perl \
+    libpath-tiny-perl \
     libpam0g-dev \
     libpcre3-dev \
     libsasl2-dev \
