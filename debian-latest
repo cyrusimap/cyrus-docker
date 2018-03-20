@@ -4,7 +4,7 @@ MAINTAINER Cyrus Works <docker@cyrus.works>
 RUN echo "CyrusWorksManualCacheInvalidationString000006"
 
 RUN echo "deb http://ftp.debian.org/debian jessie-backports main" >> /etc/apt/sources.list.d/sources.list
-RUN echo "deb http://mirrors.kernel.org/debian/ testing main >> /etc/apt/sources.list.d/sources.list
+RUN echo "deb http://ftp.debian.org/debian/ testing main" >> /etc/apt/sources.list.d/sources.list
 
 RUN apt-get update && apt-get -y install \
     autoconf \
