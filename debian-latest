@@ -4,7 +4,6 @@ MAINTAINER Cyrus Works <docker@cyrus.works>
 RUN echo "CyrusWorksManualCacheInvalidationString000006"
 
 RUN echo "deb http://ftp.debian.org/debian jessie-backports main" >> /etc/apt/sources.list.d/sources.list
-RUN echo "deb http://ftp.debian.org/debian/ testing main" >> /etc/apt/sources.list.d/sources.list
 
 RUN apt-get update && apt-get -y install \
     autoconf \
@@ -90,8 +89,6 @@ RUN apt-get update && apt-get -y install \
     xutils-dev \
     zlib1g-dev
 
-RUN apt-get install -t testing libtest-abortable-perl
-
 RUN apt-get -t jessie-backports install "cmake" -y
 
 RUN dpkg -l
@@ -155,6 +152,7 @@ RUN echo "CyrusWorksWeeklyInvalidationString"
 RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
 RUN cpan Convert::Base64 File::LibMagic;
 RUN cpan JSON::Typist
+RUN cpan Test::Abortable
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
