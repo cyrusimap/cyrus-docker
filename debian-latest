@@ -154,6 +154,7 @@ RUN cpan Test::Routine
 RUN cpan JSON::Typist
 RUN cpan Test::Abortable
 RUN cpan Email::MessageID
+RUN cpan MooseX::Role::Parameterized
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
