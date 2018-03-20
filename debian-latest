@@ -153,6 +153,7 @@ RUN cpan Convert::Base64 File::LibMagic;
 RUN cpan Test::Routine
 RUN cpan JSON::Typist
 RUN cpan Test::Abortable
+RUN cpan Email::MessageID
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
