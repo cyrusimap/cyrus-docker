@@ -56,8 +56,10 @@ RUN apt-get update && apt-get -y install \
     libsqlite3-dev \
     libssl1.0-dev \
     libstring-crc32-perl \
+    libtest-abortable-perl \
     libtest-deep-perl \
     libtest-deep-type-perl \
+    libtest-most-perl \
     libtest-unit-perl \
     libtest-routine-perl \ 
     libtool \
