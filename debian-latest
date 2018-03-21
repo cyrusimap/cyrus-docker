@@ -158,6 +158,7 @@ RUN cpan MooseX::Role::Parameterized
 RUN cpan Process::Status
 RUN cpan Data::GUID
 RUN cpan JMAP::Tester
+RUN cpan Email::MIME
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
