@@ -159,6 +159,7 @@ RUN cpan Process::Status
 RUN cpan Data::GUID
 RUN cpan JMAP::Tester
 RUN cpan Email::MIME
+RUN cpan Net::LDAP::Server::Test
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
