@@ -131,10 +131,6 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/fastmail/JMAP-TestSuite.git \
-    jmaptest.git
-
 
 RUN cpan Term::ReadLine
 
@@ -151,17 +147,13 @@ RUN echo "CyrusWorksWeeklyInvalidationString"
 RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
 RUN cpan Convert::Base64 File::LibMagic;
 
-# The following packages are required by JMAP Test Suite
-RUN cpan Test::Routine
-RUN cpan JSON::Typist
-RUN cpan Test::Abortable
-RUN cpan Email::MessageID
-RUN cpan MooseX::Role::Parameterized
-RUN cpan Process::Status
-RUN cpan Data::GUID
-RUN cpan JMAP::Tester
-RUN cpan Email::MIME
-RUN cpan Net::LDAP::Server::Test
+# Clone JMAP Test Suite and install the dependencies.
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/fastmail/JMAP-TestSuite.git \
+    jmaptest.git
+RUN pushd
+RUN cpanm --installdeps
+RUN popd
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
