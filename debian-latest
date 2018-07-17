@@ -13,6 +13,7 @@ RUN apt-get update && apt-get -y install \
     clang \
     cmake \
     comerr-dev \
+    cpanminus \
     doxygen \
     debhelper \
     flex \
