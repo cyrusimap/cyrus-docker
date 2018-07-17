@@ -151,7 +151,7 @@ RUN cpan Convert::Base64 File::LibMagic;
 # Clone JMAP Test Suite and install the dependencies.
 # NOTE: Install `Test::Route` explicitly is just a temporary thing,
 #       This will eventually be available on CPAN.
-cpanm Test::Routine@0.026 --dev
+RUN cpanm Test::Routine@0.026 --dev
 
 RUN git config --global http.sslverify false && \
     git clone https://github.com/fastmail/JMAP-TestSuite.git \
