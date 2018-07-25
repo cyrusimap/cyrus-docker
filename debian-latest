@@ -150,6 +150,7 @@ RUN cpan Convert::Base64 File::LibMagic;
 RUN cpan Net::LDAP::Constant
 RUN cpan Net::LDAP::Server
 RUN cpan Net::LDAP::Server::Test
+RUN cpan Test::Deep::JType
 
 # Clone JMAP Test Suite and install the dependencies.
 # NOTE: Install `Test::Route` explicitly is just a temporary thing,
