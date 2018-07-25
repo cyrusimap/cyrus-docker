@@ -153,8 +153,10 @@ RUN cpan Net::LDAP::Server::Test
 
 # The following packages are required by JMAP Test Suite
 RUN cpan Test::Routine
-RUN cpan JSON::Typist
+RUN cpan Test::Deep::JType
+RUN cpan Test::Deep::HashRec
 RUN cpan Test::Abortable
+RUN cpan JSON::Typist
 RUN cpan Email::MessageID
 RUN cpan MooseX::Role::Parameterized
 RUN cpan Process::Status
