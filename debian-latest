@@ -151,6 +151,7 @@ RUN cpan Net::LDAP::Constant
 RUN cpan Net::LDAP::Server
 RUN cpan Net::LDAP::Server::Test
 RUN cpan Test::Deep::JType
+RUN cpan Test::Deep::HashRec
 
 # Clone JMAP Test Suite and install the dependencies.
 # NOTE: Install `Test::Route` explicitly is just a temporary thing,
