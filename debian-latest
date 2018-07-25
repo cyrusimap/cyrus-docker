@@ -150,8 +150,18 @@ RUN cpan Convert::Base64 File::LibMagic;
 RUN cpan Net::LDAP::Constant
 RUN cpan Net::LDAP::Server
 RUN cpan Net::LDAP::Server::Test
-RUN cpan Test::Deep::JType
-RUN cpan Test::Deep::HashRec
+
+# The following packages are required by JMAP Test Suite
+RUN cpan Test::Routine
+RUN cpan JSON::Typist
+RUN cpan Test::Abortable
+RUN cpan Email::MessageID
+RUN cpan MooseX::Role::Parameterized
+RUN cpan Process::Status
+RUN cpan Data::GUID
+RUN cpan JMAP::Tester
+RUN cpan Email::MIME
+
 
 # Clone JMAP Test Suite and install the dependencies.
 # NOTE: Install `Test::Route` explicitly is just a temporary thing,
