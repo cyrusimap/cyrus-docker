@@ -163,6 +163,7 @@ RUN cpan Process::Status
 RUN cpan Data::GUID
 RUN cpan JMAP::Tester
 RUN cpan Email::MIME
+RUN cpan Mail::IMAPClient
 
 
 # Clone JMAP Test Suite and install the dependencies.
@@ -173,9 +174,9 @@ RUN cpanm Test::Routine@0.026 --dev
 RUN git config --global http.sslverify false && \
     git clone https://github.com/fastmail/JMAP-TestSuite.git \
     jmaptest.git
-RUN cd jmaptest.git
+
+WORKDIR /srv/jmaptest.git
 RUN cpanm --installdeps
-RUN cd ..
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
