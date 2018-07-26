@@ -176,7 +176,7 @@ RUN git config --global http.sslverify false && \
     jmaptest.git
 
 WORKDIR /srv/jmaptest.git
-RUN cpanm --installdeps
+RUN cpanm --installdeps .
 
 WORKDIR /srv
 RUN git config --global http.sslverify false && \
