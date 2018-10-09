@@ -175,7 +175,7 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/fastmail/JMAP-TestSuite.git \
     JMAP-TestSuite.git
 
-WORKDIR /srv/jmaptest.git
+WORKDIR /srv/JMAP-TestSuite.git
 RUN cpanm --installdeps .
 
 WORKDIR /srv
