@@ -56,6 +56,18 @@ function _cyrusbuild {
     return ${retval}
 }
 
+function _updatejmaptestsuite {
+    pushd /src/JMAP-TestSuite.git >&3
+
+    git fetch
+    git checkout ${JMAPTESTERBRANCH:-"origin/master"}
+    git clean -f -x -d
+
+    popd >&3
+
+    return 0
+}
+
 function _cassandane {
     pushd /srv/cassandane.git >&3
     git fetch
