@@ -164,12 +164,7 @@ RUN cpan Data::GUID
 RUN cpan JMAP::Tester
 RUN cpan Email::MIME
 RUN cpan Mail::IMAPClient
-
-
-# Clone JMAP Test Suite and install the dependencies.
-# NOTE: Install `Test::Route` explicitly is just a temporary thing,
-#       This will eventually be available on CPAN.
-RUN cpanm Test::Routine@0.027 --dev
+RUN cpan Test::Routine
 
 RUN git config --global http.sslverify false && \
     git clone https://github.com/fastmail/JMAP-TestSuite.git \
