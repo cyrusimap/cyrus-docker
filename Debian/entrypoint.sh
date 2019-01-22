@@ -1,0 +1,4 @@
+#!/bin/bash
+
+./testscript.sh
+

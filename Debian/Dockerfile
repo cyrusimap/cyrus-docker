@@ -162,3 +162,12 @@ RUN ./build.sh
 
 RUN mkdir /tmp/cass
 RUN chown cyrus /tmp/cass
+
+WORKDIR /root
+ENV IMAGE jessie
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/dot.bashrc /root/.bashrc
+
+WORKDIR /
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/entrypoint.sh /
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/functions.sh /
+RUN chmod 755 /entrypoint.sh
