@@ -111,12 +111,24 @@ function _cassandane {
     return ${retval}
 }
 
+function _report {
+    cat ${TMPDIR:-/tmp}/report.log
+    rm -rf ${TMPDIR:-/tmp}/report.log
+}
+
+function _report_msg {
+    printf "%*s" $(( ${BASH_SUBSHELL} * 4 )) " " >> ${TMPDIR:-/tmp}/report.log
+    echo "$@" >> ${TMPDIR:-/tmp}/report.log
+}
+
 function _shell {
     echo "Running $@ ..." >&3
     $@ >&3 2>&3 ; retval=$?
     if [ ${retval} -eq 0 ]; then
+        _report_msg "Running '$@' OK (at $(git rev-parse HEAD))"
         echo "Running $@ OK (at $(git rev-parse HEAD))" >&3
     else
+        _report_msg "Running '$@' FAILED (at $(git rev-parse HEAD))"
         echo "Running $@ FAILED (at $(git rev-parse HEAD))" >&3
     fi
 
