@@ -125,7 +125,15 @@ RUN cpan Net::LDAP::Server::Test
 RUN cpan Math::Int64
 
 
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/fastmail/JMAP-TestSuite.git \
+    JMAP-TestSuite.git
+
+WORKDIR /srv/JMAP-TestSuite.git
+RUN cpanm --installdeps .
+
 WORKDIR /srv
+
 RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/Mail-JMAPTalk.git \
     Mail-JMAPTalk.git
