@@ -169,4 +169,5 @@ ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/dot.b
 
 WORKDIR /
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/entrypoint.sh /
+ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/testscript.sh /
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/functions.sh /
