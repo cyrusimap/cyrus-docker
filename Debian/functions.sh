@@ -77,7 +77,7 @@ function _cyrusbuild {
 }
 
 function _updatejmaptestsuite {
-    pushd /src/JMAP-TestSuite.git >&3
+    pushd /srv/JMAP-TestSuite.git >&3
 
     git fetch
     git checkout ${JMAPTESTERBRANCH:-"origin/master"}
