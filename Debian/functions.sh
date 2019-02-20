@@ -103,6 +103,9 @@ function _cassandane {
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
+    echo "RUNNING utils/crash"
+    ./utils/crash
+    echo "....DONE!!!"
     retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
     # /srv/cassandane.git
