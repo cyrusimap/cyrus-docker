@@ -103,10 +103,7 @@ function _cassandane {
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
-    echo "RUNNING utils/crash"
-    ./utils/crash
-    echo "....DONE!!!"
-    retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
+    retval=$(_shell ./testrunner.pl -vvvvv Test::Core ${CASSANDANEOPTS})
 
     # /srv/cassandane.git
     popd >&3
