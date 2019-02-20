@@ -181,3 +181,5 @@ ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/tests
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/functions.sh /
 RUN chmod 755 /entrypoint.sh
 RUN chmod 755 /testscript.sh
+
+RUN sed '/^::1/ d' /etc/hosts > /etc/hosts
