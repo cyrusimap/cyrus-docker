@@ -103,7 +103,7 @@ function _cassandane {
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
-    retval=$(_shell ./testrunner.pl -vvvvv -j 4 ${CASSANDANEOPTS})
+    retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
     # /srv/cassandane.git
     popd >&3
