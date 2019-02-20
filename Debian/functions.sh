@@ -103,9 +103,7 @@ function _cassandane {
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
-    ls -l /tmp/
-    retval=$(_shell ./testrunner.pl -vvvvv Test::Core ${CASSANDANEOPTS})
-    ls -lR /tmp/cass
+    retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
     # /srv/cassandane.git
     popd >&3
