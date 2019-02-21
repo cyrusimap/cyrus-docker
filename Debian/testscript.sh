@@ -7,4 +7,7 @@ _cassandaneclone
 _cyrusbuild
 _updatejmaptestsuite
 _cassandane
+retval = $?
 _report
+exit ${retval}
+
