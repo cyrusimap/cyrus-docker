@@ -82,6 +82,7 @@ function _updatejmaptestsuite {
     git fetch
     git checkout ${JMAPTESTERBRANCH:-"origin/master"}
     git clean -f -x -d
+    cpanm --installdeps .
 
     popd >&3
 
