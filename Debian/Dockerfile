@@ -1,7 +1,8 @@
 FROM debian:jessie
 MAINTAINER Cyrus IMAP <docker@role.fastmailteam.com>
 
-RUN echo "deb http://ftp.debian.org/debian jessie-backports main" >> /etc/apt/sources.list.d/sources.list
+RUN echo "deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main" >> /etc/apt/sources.list.d/sources.list
+
 
 RUN apt-get update && apt-get -y install \
     autoconf \
