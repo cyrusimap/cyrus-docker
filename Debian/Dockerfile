@@ -76,8 +76,8 @@ RUN apt-get update && apt-get -y install \
     net-tools \
     pandoc \
     perl \
-    php5-cli \
-    php5-curl \
+    php-cli \
+    php-curl \
     pkg-config \
     po-debconf \
     python-docutils \
@@ -91,7 +91,7 @@ RUN apt-get update && apt-get -y install \
     xutils-dev \
     zlib1g-dev
 
-RUN apt-get -t jessie-backports install "cmake" -y
+# RUN apt-get -t jessie-backports install "cmake" -y
 
 RUN dpkg -l
 
@@ -174,7 +174,7 @@ RUN mkdir /tmp/cass
 RUN chown cyrus /tmp/cass
 
 WORKDIR /root
-ENV IMAGE jessie
+ENV IMAGE buster
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/dot.bashrc /root/.bashrc
 
 WORKDIR /
