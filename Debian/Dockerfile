@@ -1,9 +1,9 @@
-FROM debian:jessie
+FROM debian:buster
 MAINTAINER Cyrus IMAP <docker@role.fastmailteam.com>
 
-RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
+# RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
 
-RUN echo "deb http://archive.debian.org/debian/ jessie-backports main contrib" >> /etc/apt/sources.list.d/sources.list
+# RUN echo "deb http://archive.debian.org/debian/ jessie-backports main contrib" >> /etc/apt/sources.list.d/sources.list
 
 RUN apt-get update && apt-get -y install \
     autoconf \
