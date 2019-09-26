@@ -81,7 +81,9 @@ RUN apt-get update && apt-get -y install \
     pkg-config \
     po-debconf \
     python-docutils \
+    python-sphinx \
     sudo \
+    sphinx-common \
     tcl-dev \
     transfig \
     uuid-dev \
