@@ -1,0 +1,219 @@
+FROM debian:sid
+MAINTAINER Cyrus Works <docker@cyrus.works>
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/docker-no-recommends && \
+    echo 'APT::Install-Suggests "false";' >> /etc/apt/apt.conf.d/docker-no-recommends 
+
+RUN apt-get update && apt-get -y install \
+    apt-utils \
+    autoconf \
+    automake \
+    autotools-dev \
+    bash-completion \
+    bison \
+    build-essential \
+    check \
+    clang \
+    cmake \
+    comerr-dev \
+    cpanminus \
+    doxygen \
+    debhelper \
+    flex \
+    g++ \
+    git \
+    gperf \
+    graphviz \
+    groff \
+    texi2html \
+    texinfo \
+    heimdal-dev \
+    help2man \
+    libanyevent-perl \
+    libbsd-dev \
+    libbsd-resource-perl \
+    libclone-perl \
+    libconfig-inifiles-perl \
+    libcunit1-dev \
+    libdatetime-perl \
+    libdb-dev \
+    libdbi-perl \
+    libdigest-sha-perl \
+    libencode-imaputf7-perl \
+    libfile-chdir-perl \
+    libfile-slurp-perl \
+    libglib2.0-dev \
+    libhttp-daemon-perl \
+    libio-socket-inet6-perl \
+    libio-stringy-perl \
+    libjson-perl \
+    libjson-xs-perl \
+    libldap2-dev \
+    libmagic-dev \
+    libmilter-dev \
+    default-libmysqlclient-dev \
+    libnet-server-perl \
+    libnews-nntpclient-perl \
+    libpath-tiny-perl \
+    libpam0g-dev \
+    libpcre3-dev \
+    libsasl2-dev \
+    libsnmp-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libstring-crc32-perl \
+    libtest-deep-perl \
+    libtest-deep-type-perl \
+    libtest-most-perl \
+    libtest-unit-perl \
+    libtool \
+    libunix-syslog-perl \
+    liburi-perl \
+    libxml-generator-perl \
+    libxml-xpath-perl \
+    libxml2-dev \
+    libwrap0-dev \
+    libxapian-dev \
+    libzephyr-dev \
+    lsb-base \
+    net-tools \
+    pandoc \
+    perl \
+    php-cli \
+    php-curl \
+    pkg-config \
+    po-debconf \
+    python-docutils \
+    python-sphinx \
+    python-pygments \
+    python3-pygments \
+    rsync \
+    sudo \
+    sphinx-common \
+    tcl-dev \
+    transfig \
+    uuid-dev \
+    vim \
+    wamerican \
+    wget \
+    xutils-dev \
+    zlib1g-dev
+
+RUN dpkg -l
+
+RUN groupadd -r saslauth ; \
+    groupadd -r mail ; \
+    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
+    -g mail -G saslauth -s /bin/bash -r cyrus
+
+WORKDIR /srv
+RUN apt-get -y install cyrus-imapd
+# RUN git config --global http.sslverify false && \
+#     git clone https://github.com/cyrusimap/cyrus-imapd.git \
+#     cyrus-imapd.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cyrus-docker.git \
+    cyrus-docker.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cassandane.git \
+    cassandane.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/cyruslibs.git \
+    cyruslibs.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/dovecot/core.git \
+    dovecot.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/imaptest.git \
+    imaptest.git
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/CalDAVTester.git \
+    caldavtester.git
+
+RUN cpan Term::ReadLine
+RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
+RUN cpan Convert::Base64 File::LibMagic;
+RUN cpan Net::LDAP::Constant
+RUN cpan Net::LDAP::Server
+RUN cpan Net::LDAP::Server::Test
+RUN cpan Math::Int64
+
+# The following packages are required by JMAP Test Suite
+RUN cpan Test::Routine
+RUN cpan Test::Deep::JType
+RUN cpan Test::Deep::HashRec
+RUN cpan Test::Abortable
+RUN cpan JSON::Typist
+RUN cpan Email::MessageID
+RUN cpan MooseX::Role::Parameterized
+RUN cpan Process::Status
+RUN cpan Data::GUID
+RUN cpan JMAP::Tester
+RUN cpan Email::MIME
+RUN cpan Mail::IMAPClient
+RUN cpan Test::Routine
+
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/fastmail/JMAP-TestSuite.git \
+    JMAP-TestSuite.git
+
+WORKDIR /srv/JMAP-TestSuite.git
+RUN cpanm --installdeps .
+
+WORKDIR /srv
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/cyrusimap/Mail-JMAPTalk.git \
+    Mail-JMAPTalk.git
+    
+WORKDIR /srv/Mail-JMAPTalk.git
+RUN perl Makefile.PL
+RUN make
+RUN make test
+RUN make install
+
+WORKDIR /srv/dovecot.git
+RUN git fetch
+# NOTE: change this only after testing
+RUN git checkout -q 6264b51bcce8ae98efdcda3e55a765d7a13d15ed
+RUN ./autogen.sh
+RUN ./configure --enable-silent-rules
+RUN make -j 8
+
+WORKDIR /srv/imaptest.git
+RUN git fetch
+RUN git checkout -q origin/cyrus
+RUN sh autogen.sh
+RUN ./configure --enable-silent-rules --with-dovecot=/srv/dovecot.git
+RUN make -j 8
+# need to run it once as root to link up libs
+RUN src/imaptest || true
+
+# WORKDIR /srv/cyruslibs.git
+# RUN git fetch
+# RUN git checkout origin/master
+# RUN git submodule init
+# RUN git submodule update
+# RUN ./build.sh
+
+RUN mkdir /tmp/cass
+RUN chown cyrus /tmp/cass
+
+WORKDIR /root
+ENV IMAGE sid
+
+WORKDIR /
+ADD entrypoint.sh /
+ADD testscript.sh /
+ADD functions.sh /
+RUN chmod 755 /entrypoint.sh
+RUN chmod 755 /testscript.sh
+
+ENTRYPOINT /entrypoint.sh
