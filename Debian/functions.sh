@@ -42,7 +42,7 @@ function _cassandaneclone {
 function _cyrusbuild {
     pushd /srv/cyrus-imapd.git >&3
     git fetch
-    git checkout ${CYRUSBRANCH:-"origin/master"}
+    git checkout -q ${CYRUSBRANCH:-"origin/master"}
     git clean -f -x -d
 
     CFLAGS="-g -W -Wall -Wextra -Werror"
@@ -80,7 +80,7 @@ function _updatejmaptestsuite {
     pushd /srv/JMAP-TestSuite.git >&3
 
     git fetch
-    git checkout ${JMAPTESTERBRANCH:-"origin/master"}
+    git checkout -q ${JMAPTESTERBRANCH:-"origin/master"}
     git clean -f -x -d
     cpanm --installdeps .
 
@@ -92,7 +92,7 @@ function _updatejmaptestsuite {
 function _cassandane {
     pushd /srv/cassandane.git >&3
     git fetch
-    git checkout ${CASSANDANEBRANCH:-"origin/master"}
+    git checkout -q ${CASSANDANEBRANCH:-"origin/master"}
     git clean -f -x -d
 
     retval=$(_shell make)
