@@ -42,7 +42,7 @@ function _cassandaneclone {
 function _cyrusbuild {
     pushd /srv/cyrus-imapd.git >&3
     git fetch
-    git checkout ${CYRUSBRANCH:-"origin/master"}
+    git checkout -q ${CYRUSBRANCH:-"origin/master"}
     git clean -f -x -d
 
     CFLAGS="-g -W -Wall -Wextra -Werror"
@@ -80,7 +80,7 @@ function _updatejmaptestsuite {
     pushd /srv/JMAP-TestSuite.git >&3
 
     git fetch
-    git checkout ${JMAPTESTERBRANCH:-"origin/master"}
+    git checkout -q ${JMAPTESTERBRANCH:-"origin/master"}
     git clean -f -x -d
     cpanm --installdeps .
 
@@ -90,19 +90,24 @@ function _updatejmaptestsuite {
 }
 
 function _cassandane {
+    local BUILD_CYRUS_FROM_SOURCE="$1"
     pushd /srv/cassandane.git >&3
     git fetch
-    git checkout ${CASSANDANEBRANCH:-"origin/master"}
+    git checkout -q ${CASSANDANEBRANCH:-"origin/master"}
     git clean -f -x -d
 
     retval=$(_shell make)
 
     if [ ${retval} -ne 0 ]; then
-        echo "WARNING: Could not run Cassandane"
-        return 0
+         # XXX do we need to 'popd >&3' in here???
+         echo "WARNING: Could not run Cassandane"
+         return ${retval}
     fi
 
     cp -af cassandane.ini.dockertests cassandane.ini
+    if [ "$BUILD_CYRUS_FROM_SOURCE" != "yes" ] ; then
+        perl -i -pe 's|(?<=\[cyrus default\])|\nprefix = /usr/lib|' cassandane.ini
+    fi
 
     retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
