@@ -98,8 +98,9 @@ function _cassandane {
     retval=$(_shell make)
 
     if [ ${retval} -ne 0 ]; then
+        # XXX do we need to 'popd >&3' in here???
         echo "WARNING: Could not run Cassandane"
-        return 0
+        return ${retval}
     fi
 
     cp -af cassandane.ini.dockertests cassandane.ini
