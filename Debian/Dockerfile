@@ -43,6 +43,7 @@ RUN apt-get update && apt-get -y install \
     libfile-chdir-perl \
     libfile-slurp-perl \
     libglib2.0-dev \
+    libio-async-perl \
     libio-socket-inet6-perl \
     libio-stringy-perl \
     libjson-perl \
@@ -122,6 +123,36 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
+#RUN cpanm install Convert::Color
+#RUN cpanm install Convert::Color::XTerm
+#RUN cpanm install Commandable::Invocation
+#RUN cpanm install Devel::MAT::Dumper
+#RUN cpanm install Heap
+#RUN cpanm install List::UtilsBy
+#RUN cpanm install Module::Pluggable
+#RUN cpanm install Module::Pluggable::Object
+#RUN cpanm install Future
+#RUN cpanm install Future::Utils
+#RUN cpanm install String::Tagged
+#RUN cpanm install String::Tagged::Terminal
+#RUN cpanm install Syntax::Keyword::Try
+#RUN cpanm install Struct::Dumb
+#RUN cpanm install Term::ReadLine
+#RUN cpanm install Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
+#RUN cpanm install Convert::Base64 File::LibMagic;
+#RUN cpanm install Net::LDAP::Constant
+#RUN cpanm install Net::LDAP::Server
+#RUN cpanm install Net::LDAP::Server::Test
+#RUN cpanm install Math::Int64
+#RUN cpanm install File::Find::Rule
+#RUN cpanm install Pod::Coverage
+#RUN cpanm install Test::Pod::Coverage
+#RUN cpanm install Data::UUID
+#RUN cpanm install Tie::DataUUID
+#RUN cpanm install XML::Fast
+#RUN cpanm install XML::Spice
+#RUN cpanm install Net::Async::WebSocket::Client
+
 RUN cpanm install Term::ReadLine
 RUN cpanm install Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
 RUN cpanm install Convert::Base64 File::LibMagic;
@@ -129,6 +160,10 @@ RUN cpanm install Net::LDAP::Constant
 RUN cpanm install Net::LDAP::Server
 RUN cpanm install Net::LDAP::Server::Test
 RUN cpanm install Math::Int64
+#RUN cpanm install --force IO::Async::Notifier
+#RUN cpanm install IO::Async::OS
+#RUN cpanm install IO::Async::Stream
+#RUN cpanm install IO::Async::Loop
 
 
 RUN git config --global http.sslverify false && \
