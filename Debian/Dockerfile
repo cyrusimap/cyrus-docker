@@ -37,6 +37,7 @@ RUN apt-get update && apt-get -y install \
     libcunit1-dev \
     libdatetime-perl \
     libdb-dev \
+    libdbi-perl \
     libdigest-sha-perl \
     libencode-imaputf7-perl \
     libfile-chdir-perl \
@@ -82,6 +83,7 @@ RUN apt-get update && apt-get -y install \
     po-debconf \
     python-docutils \
     python-sphinx \
+    rsync \
     sudo \
     sphinx-common \
     tcl-dev \
