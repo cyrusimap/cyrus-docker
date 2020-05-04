@@ -122,13 +122,13 @@ RUN git config --global http.sslverify false && \
     git clone https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
-RUN cpan Term::ReadLine
-RUN cpan Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
-RUN cpan Convert::Base64 File::LibMagic;
-RUN cpan Net::LDAP::Constant
-RUN cpan Net::LDAP::Server
-RUN cpan Net::LDAP::Server::Test
-RUN cpan Math::Int64
+RUN cpanm install Term::ReadLine
+RUN cpanm install Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
+RUN cpanm install Convert::Base64 File::LibMagic;
+RUN cpanm install Net::LDAP::Constant
+RUN cpanm install Net::LDAP::Server
+RUN cpanm install Net::LDAP::Server::Test
+RUN cpanm install Math::Int64
 
 
 RUN git config --global http.sslverify false && \
