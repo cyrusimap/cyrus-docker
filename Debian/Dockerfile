@@ -106,6 +106,8 @@ RUN groupadd -r saslauth ; \
     useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
     -g mail -G saslauth -s /bin/bash -r cyrus
 
+RUN service rsyslog start
+
 WORKDIR /srv
 
 RUN git config --global http.sslverify false && \

@@ -2,29 +2,41 @@
 
 source functions.sh
 
-echo "Updating cyrus-imapd..."
+echo "[=> 1/6] Updating cyrus-imapd..."
+echo "travis_fold:start:clone_cyrus"
 _cyrusclone
+echo "travis_fold:end:clone_cyrus"
 
-echo "Updating cassandane..."
+echo "[=> 2/6] Updating cassandane..."
+echo "travis_fold:start:clone_cassandane"
 _cassandaneclone
+echo "travis_fold:end:clone_cassandane"
 
-echo "Building cyrus-imapd..."
+echo "[=> 3/6] Building cyrus-imapd..."
+echo "travis_fold:start:make_and_make_check_cyrus"
 _cyrusbuild
+echo "travis_fold:end:make_and_make_check_cyrus"
 retval=$?
 if [ ${retval} -ne 0 ]; then
     exit ${retval}
 fi
 
-echo "Updating JMAPTestSuite..."
+echo "[=> 4/6] Updating JMAPTestSuite..."
+echo "travis_fold:start:update_jmap_test_suite"
 _updatejmaptestsuite
+echo "travis_fold:end:update_jmap_test_suite"
 
-echo "Running Cassandane Tests..."
+echo "[=> 5/6] Running Cassandane Tests..."
+echo "travis_fold:start:cassandane"
 _cassandane
+echo "travis_fold:end:cassandane"
 retval=$?
 if [ ${retval} -ne 0 ]; then
     exit ${retval}
 fi
 
-echo "Generating Test Report..."
+echo "[=> 6/6] Generating Test Report..."
+echo "travis_fold:start:test_report"
 _report
+echo "travis_fold:end:test_report"
 exit ${retval}
