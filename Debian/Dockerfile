@@ -161,6 +161,7 @@ RUN cpanm install Net::LDAP::Constant
 RUN cpanm install Net::LDAP::Server
 RUN cpanm install Net::LDAP::Server::Test
 RUN cpanm install Math::Int64
+RUN cpanm install DBD::SQLite
 #RUN cpanm install --force IO::Async::Notifier
 #RUN cpanm install IO::Async::OS
 #RUN cpanm install IO::Async::Stream
