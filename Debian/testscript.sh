@@ -15,8 +15,8 @@ echo "travis_fold:end:clone_cassandane"
 echo "[=> 3/6] Building cyrus-imapd..."
 echo "travis_fold:start:make_and_make_check_cyrus"
 _cyrusbuild
-echo "travis_fold:end:make_and_make_check_cyrus"
 retval=$?
+echo "travis_fold:end:make_and_make_check_cyrus"
 if [ ${retval} -ne 0 ]; then
     exit ${retval}
 fi
@@ -29,8 +29,8 @@ echo "travis_fold:end:update_jmap_test_suite"
 echo "[=> 5/6] Running Cassandane Tests..."
 echo "travis_fold:start:cassandane"
 _cassandane
-echo "travis_fold:end:cassandane"
 retval=$?
+echo "travis_fold:end:cassandane"
 if [ ${retval} -ne 0 ]; then
     exit ${retval}
 fi
