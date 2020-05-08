@@ -1,20 +1,5 @@
 #!/bin/bash
 
-# Note: Possibly available variables from Phabricator:
-#
-# build.id              - use this for the container name,
-#                         and for providing feedback
-# buildable.commit      - we call this ${COMMIT}
-# buildable.diff
-# buildable.revision    - we call this ${DIFFERENTIAL}
-# repository.callsign   - use this to query the commit
-# repository.uri
-# repository.vcs
-# step.timestamp
-# target.phid           - we call this ${PHID} (?)
-#                         tends to be a harbormaster id
-#
-
 # Create 3 as an alias for 1, so the _shell function
 # can output data without the caller getting the input.
 exec 3>&1
@@ -41,7 +26,25 @@ function _cassandaneclone {
 
 function _cyrusbuild {
     pushd /srv/cyrus-imapd.git >&3
-    git fetch
+
+    if [ "$TRAVIS_PULL_REQUEST" = "false" ];
+    then
+        # Not a pull request
+        CYRUSBRANCH=$TRAVIS_BRANCH
+        export CYRUSBRANCH
+        git fetch
+    fi
+
+    if [ "$TRAVIS_PULL_REQUEST" != "false" ];
+    then
+        # A pull request
+        CYRUSBRANCH="PR_TEST_BRANCH"
+        export CYRUSBRANCH
+        git fetch origin pull/$TRAVIS_PULL_REQUEST/head:$CYRUSBRANCH
+    fi
+
+    echo "===> Pulling branch $CYRUSBRANCH..."
+
     git checkout ${CYRUSBRANCH:-"origin/master"}
     git clean -f -x -d
 
