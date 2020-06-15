@@ -56,7 +56,7 @@ RUN apt-get update && apt-get -y install \
     libsasl2-dev \
     libsnmp-dev \
     libsqlite3-dev \
-    libssl1.0-dev \
+    libssl-dev \
     libstring-crc32-perl \
     libtest-deep-perl \
     libtest-deep-type-perl \
@@ -80,7 +80,9 @@ RUN apt-get update && apt-get -y install \
     pkg-config \
     po-debconf \
     python-docutils \
+    python-sphinx \
     sudo \
+    sphinx-common \
     tcl-dev \
     transfig \
     uuid-dev \
