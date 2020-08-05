@@ -102,7 +102,8 @@ function _cassandane {
 
     if [ ${retval} -ne 0 ]; then
         echo "WARNING: Could not run Cassandane"
-        return 0
+        popd >&3
+        return ${retval}
     fi
 
     cp -af cassandane.ini.dockertests cassandane.ini
