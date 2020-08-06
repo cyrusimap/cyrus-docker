@@ -164,6 +164,7 @@ RUN cpanm install Net::LDAP::Server
 RUN cpanm install Net::LDAP::Server::Test
 RUN cpanm install Math::Int64
 RUN cpanm install DBD::SQLite
+
 #RUN cpanm install --force IO::Async::Notifier
 #RUN cpanm install IO::Async::OS
 #RUN cpanm install IO::Async::Stream
@@ -213,7 +214,6 @@ RUN git submodule init
 RUN git submodule update
 RUN ./build.sh cyruslibs re2
 RUN ./build.sh cyruslibs cre2
-RUN ./build.sh cyruslibs zeroskip
 RUN ./build.sh cyruslibs jansson
 RUN ./build.sh cyruslibs libical
 RUN ./build.sh cyruslibs timezones
@@ -221,6 +221,7 @@ RUN ./build.sh cyruslibs xapian
 RUN ./build.sh cyruslibs wslay
 RUN ./build.sh cyruslibs libchardet
 RUN ./build.sh cyruslibs cld2
+RUN ./build.sh cyruslibs zeroskip
 
 RUN mkdir /tmp/cass
 RUN chown cyrus /tmp/cass
