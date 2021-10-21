@@ -98,6 +98,8 @@ function _cassandane {
     git checkout ${CASSANDANEBRANCH:-"origin/master"}
     git clean -f -x -d
 
+    cp -af cassandane.ini.dockertests cassandane.ini
+
     retval=$(_shell make)
 
     if [ ${retval} -ne 0 ]; then
@@ -105,8 +107,6 @@ function _cassandane {
         popd >&3
         return ${retval}
     fi
-
-    cp -af cassandane.ini.dockertests cassandane.ini
 
     retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
