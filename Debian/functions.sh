@@ -58,7 +58,6 @@ function _cyrusbuild {
         --enable-gssapi
         --enable-http
         --enable-idled
-        --enable-maintainer-mode
         --enable-murder
         --enable-nntp
         --enable-replication
