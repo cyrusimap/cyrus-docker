@@ -14,16 +14,6 @@ function _cyrusclone {
     return 0
 }
 
-function _cassandaneclone {
-    pushd /srv/
-
-    git config --global http.sslverify false
-    git clone https://github.com/cyrusimap/cassandane.git cassandane.git
-
-    popd >&3
-    return 0
-}
-
 function _cyrusbuild {
     pushd /srv/cyrus-imapd.git >&3
 
@@ -92,10 +82,8 @@ function _updatejmaptestsuite {
 }
 
 function _cassandane {
-    pushd /srv/cassandane.git >&3
-    git fetch
-    git checkout ${CASSANDANEBRANCH:-"origin/master"}
-    git clean -f -x -d
+    # cassandane is in the cyrus-imapd repository
+    pushd /srv/cyrus-imapd.git/cassandane >&3
 
     cp -af cassandane.ini.dockertests cassandane.ini
 
@@ -109,7 +97,7 @@ function _cassandane {
 
     retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
-    # /srv/cassandane.git
+    # /srv/cyrus-imapd.git/cassandane
     popd >&3
 
     return ${retval}
