@@ -212,16 +212,7 @@ RUN git fetch
 RUN git checkout origin/master
 RUN git submodule init
 RUN git submodule update
-RUN ./build.sh cyruslibs re2
-RUN ./build.sh cyruslibs cre2
-RUN ./build.sh cyruslibs jansson
-RUN ./build.sh cyruslibs libical
-RUN ./build.sh cyruslibs timezones
-RUN ./build.sh cyruslibs xapian
-RUN ./build.sh cyruslibs wslay
-RUN ./build.sh cyruslibs libchardet
-RUN ./build.sh cyruslibs cld2
-RUN ./build.sh cyruslibs zeroskip
+RUN ./build.sh
 
 RUN mkdir /tmp/cass
 RUN chown cyrus /tmp/cass
