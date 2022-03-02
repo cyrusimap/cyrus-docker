@@ -85,6 +85,7 @@ function _cassandane {
     pushd /srv/cyrus-imapd.git/cassandane >&3
 
     cp -af cassandane.ini.dockertests cassandane.ini
+    chown cyrus:mail cassandane.ini
 
     retval=$(_shell make)
 
@@ -94,7 +95,9 @@ function _cassandane {
         return ${retval}
     fi
 
-    retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
+    retval=$(_shell setpriv --reuid=cyrus --regid=mail \
+                            --clear-groups --inh-caps=-all \
+                            ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
     popd >&3
 
