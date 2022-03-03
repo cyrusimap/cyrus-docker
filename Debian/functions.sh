@@ -17,16 +17,13 @@ function _cyrusclone {
 function _cyrusbuild {
     pushd /srv/cyrus-imapd.git >&3
 
-    if [ "$TRAVIS_PULL_REQUEST" = "false" ];
+    if [ -z "$TRAVIS_PULL_REQUEST" -o "$TRAVIS_PULL_REQUEST" = "false" ];
     then
         # Not a pull request
-        CYRUSBRANCH=$TRAVIS_BRANCH
+        CYRUSBRANCH=${TRAVIS_BRANCH:-"origin/master"}
         export CYRUSBRANCH
         git fetch
-    fi
-
-    if [ "$TRAVIS_PULL_REQUEST" != "false" ];
-    then
+    else
         # A pull request
         CYRUSBRANCH="PR_TEST_BRANCH"
         export CYRUSBRANCH
@@ -35,7 +32,7 @@ function _cyrusbuild {
 
     echo "===> Pulling branch $CYRUSBRANCH..."
 
-    git checkout ${CYRUSBRANCH:-"origin/master"}
+    git checkout $CYRUSBRANCH
     git clean -f -x -d
 
     CFLAGS="-g -W -Wall -Wextra -Werror"
@@ -85,6 +82,7 @@ function _cassandane {
     pushd /srv/cyrus-imapd.git/cassandane >&3
 
     cp -af cassandane.ini.dockertests cassandane.ini
+    chown cyrus:mail cassandane.ini
 
     retval=$(_shell make)
 
@@ -94,7 +92,9 @@ function _cassandane {
         return ${retval}
     fi
 
-    retval=$(_shell ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
+    retval=$(_shell setpriv --reuid=cyrus --regid=mail \
+                            --clear-groups --inh-caps=-all \
+                            ./testrunner.pl -f pretty -j 4 ${CASSANDANEOPTS})
 
     popd >&3
 
