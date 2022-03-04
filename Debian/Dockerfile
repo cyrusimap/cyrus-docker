@@ -57,6 +57,7 @@ RUN apt-get update && apt-get -y install \
     libpath-tiny-perl \
     libpam0g-dev \
     libpcre3-dev \
+    libplack-perl \
     libsasl2-dev \
     libsnmp-dev \
     libsqlite3-dev \
@@ -65,6 +66,7 @@ RUN apt-get update && apt-get -y install \
     libtest-deep-perl \
     libtest-most-perl \
     libtest-unit-perl \
+    libtest-tcp-perl \
     libtool \
     libunix-syslog-perl \
     liburi-perl \
@@ -72,6 +74,7 @@ RUN apt-get update && apt-get -y install \
     libxml-xpath-perl \
     libxml2-dev \
     libwrap0-dev \
+    libwww-perl \
     libxapian-dev \
     libzephyr-dev \
     lsb-base \
