@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:bullseye
 MAINTAINER Cyrus IMAP <docker@role.fastmailteam.com>
 
 # RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
@@ -85,12 +85,11 @@ RUN apt-get update && apt-get -y install \
     php-curl \
     pkg-config \
     po-debconf \
-    python-docutils \
-    python-sphinx \
     rsync \
     rsyslog \
     sudo \
     sphinx-common \
+    sphinx-doc \
     tcl-dev \
     transfig \
     uuid-dev \
@@ -221,7 +220,7 @@ RUN mkdir /tmp/cass
 RUN chown cyrus /tmp/cass
 
 WORKDIR /root
-ENV IMAGE buster
+ENV IMAGE bullseye
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/dot.bashrc /root/.bashrc
 
 WORKDIR /
