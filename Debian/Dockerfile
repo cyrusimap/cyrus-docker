@@ -196,7 +196,7 @@ RUN make install
 WORKDIR /srv/dovecot.git
 RUN git fetch
 # NOTE: change this only after testing
-RUN git checkout 6264b51bcce8ae98efdcda3e55a765d7a13d15ed
+RUN git checkout c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
 RUN ./autogen.sh
 RUN ./configure --enable-silent-rules
 RUN make -j 8
