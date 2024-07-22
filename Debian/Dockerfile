@@ -1,5 +1,5 @@
-FROM debian:buster
-MAINTAINER Cyrus IMAP <docker@role.fastmailteam.com>
+FROM debian:bookworm
+LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
 # RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
 
@@ -71,6 +71,7 @@ RUN apt-get update && apt-get -y install \
     libunix-syslog-perl \
     liburi-perl \
     libxml-generator-perl \
+    libxml-simple-perl \
     libxml-xpath-perl \
     libxml2-dev \
     libwrap0-dev \
@@ -85,8 +86,6 @@ RUN apt-get update && apt-get -y install \
     php-curl \
     pkg-config \
     po-debconf \
-    python-docutils \
-    python-sphinx \
     rsync \
     rsyslog \
     sudo \
@@ -108,8 +107,6 @@ RUN groupadd -r saslauth ; \
     groupadd -r mail ; \
     useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
     -g mail -G saslauth -s /bin/bash -r cyrus
-
-RUN service rsyslog start
 
 WORKDIR /srv
 
@@ -167,6 +164,8 @@ RUN cpanm install Net::LDAP::Server
 RUN cpanm install Net::LDAP::Server::Test
 RUN cpanm install Math::Int64
 RUN cpanm install DBD::SQLite
+RUN cpanm install IO::File::fcntl
+RUN cpanm install Digest::CRC
 
 #RUN cpanm install --force IO::Async::Notifier
 #RUN cpanm install IO::Async::OS
@@ -218,13 +217,18 @@ RUN git submodule update
 RUN ./build.sh
 
 RUN mkdir /tmp/cass
-RUN chown cyrus /tmp/cass
+RUN chown cyrus:mail /tmp/cass
 
 WORKDIR /root
-ENV IMAGE buster
+ENV IMAGE=bookworm
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/dot.bashrc /root/.bashrc
 
 WORKDIR /
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/entrypoint.sh /
 ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/functions.sh /
 RUN chmod 755 /entrypoint.sh
+
+# Disable Kernel Log Input module in rsyslog.
+RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
+
+CMD ["/entrypoint.sh"]
