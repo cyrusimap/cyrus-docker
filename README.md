@@ -21,10 +21,10 @@ $ docker build -t <image-name> .
 ```
 
 where `<image-name>` could be anything you like. Because the current
-docker image is based of buster, we would typically run it as:
+docker image is based of bookworm, we would typically run it as:
 
 ```
-$ docker build -t cyrus-buster .
+$ docker build -t cyrus-bookworm .
 ```
 
 ..and let docker do its thing.
@@ -32,7 +32,7 @@ $ docker build -t cyrus-buster .
 ## Fetch latest images from hub.docker.com
 
 ```
-$ docker pull cyrusimapdocker/cyrus-buster
+$ docker pull cyrusimapdocker/cyrus-bookworm
 ```
 
 
@@ -42,17 +42,17 @@ To run the built container:
 
 
 ```
-$ docker run -it cyrus-buster /bin/sh
+$ docker run -it cyrus-bookworm /bin/sh
 ```
 
 If the image has been fetched from hub.docker.com, run it like so:
 
 ```
-$ docker run -it cyrusimapdocker/cyrus-buster /bin/sh
+$ docker run -it cyrusimapdocker/cyrus-bookworm /bin/sh
 
 ```
 
 NOTE: Please note that this README assumes that the image being built
-is `cyrus-buster` and based on [Debian
-buster](https://www.debian.org/releases/buster/). Please replace with
+is `cyrus-bookworm` and based on [Debian
+bookworm](https://www.debian.org/releases/bookworm/). Please replace with
 the appopriate relase to reflect the changes in the `Dockerfile`.

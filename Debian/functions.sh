@@ -4,6 +4,16 @@
 # can output data without the caller getting the input.
 exec 3>&1
 
+function _disable_ipv6 {
+    TMPFILE=`mktemp`
+    sed '/::1/s/^/#/' /etc/hosts > $TMPFILE
+    if [ $? -ne 0 ]; then
+        return $?
+    fi
+    cp $TMPFILE /etc/hosts
+    return $?
+}
+
 function _cyrusclone {
     pushd /srv/
 

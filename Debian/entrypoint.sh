@@ -2,6 +2,12 @@
 
 source functions.sh
 
+echo "Starting syslog daemon"
+/usr/sbin/rsyslogd
+if [ $? -ne 0 ]; then
+    exit ${$?}
+fi
+
 echo "[=> 1/5] Updating cyrus-imapd..."
 echo "travis_fold:start:clone_cyrus"
 _cyrusclone
