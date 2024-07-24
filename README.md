@@ -42,13 +42,13 @@ To run the built container:
 
 
 ```
-$ docker run -it cyrus-bookworm /bin/sh
+$ docker run -it --sysctl net.ipv6.conf.all.disable_ipv6=0 cyrus-bookworm
 ```
 
 If the image has been fetched from hub.docker.com, run it like so:
 
 ```
-$ docker run -it cyrusimapdocker/cyrus-bookworm /bin/sh
+$ docker run -it --sysctl net.ipv6.conf.all.disable_ipv6=0 cyrusimapdocker/cyrus-bookworm
 
 ```
 
