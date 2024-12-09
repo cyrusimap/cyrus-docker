@@ -121,11 +121,11 @@ RUN git config --global http.sslverify false && \
     dovecot.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/imaptest.git \
+    git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git \
     imaptest.git
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/CalDAVTester.git \
+    git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
 #RUN cpanm install Convert::Color
@@ -167,7 +167,7 @@ RUN cpanm install Term::ReadLine Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
 
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/fastmail/JMAP-TestSuite.git \
+    git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git \
     JMAP-TestSuite.git
 
 WORKDIR /srv/JMAP-TestSuite.git
@@ -176,9 +176,9 @@ RUN cpanm --installdeps .
 WORKDIR /srv
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/Mail-JMAPTalk.git \
+    git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/Mail-JMAPTalk.git \
     Mail-JMAPTalk.git
-    
+
 WORKDIR /srv/Mail-JMAPTalk.git
 RUN perl Makefile.PL
 RUN make
@@ -195,7 +195,7 @@ RUN make -j 8
 
 WORKDIR /srv/imaptest.git
 RUN git fetch
-RUN git checkout origin/cyrus
+# RUN git checkout origin/cyrus
 RUN sh autogen.sh
 RUN ./configure --enable-silent-rules --with-dovecot=/srv/dovecot.git
 RUN make -j 8
