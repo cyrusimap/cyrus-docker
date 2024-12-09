@@ -158,16 +158,7 @@ RUN git config --global http.sslverify false && \
 #RUN cpanm install XML::Spice
 #RUN cpanm install Net::Async::WebSocket::Client
 
-RUN cpanm install Term::ReadLine
-RUN cpanm install Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
-RUN cpanm install Convert::Base64 File::LibMagic;
-RUN cpanm install Net::LDAP::Constant
-RUN cpanm install Net::LDAP::Server
-RUN cpanm install Net::LDAP::Server::Test
-RUN cpanm install Math::Int64
-RUN cpanm install DBD::SQLite
-RUN cpanm install IO::File::fcntl
-RUN cpanm install Digest::CRC
+RUN cpanm install Term::ReadLine Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Convert::Base64 File::LibMagic Net::LDAP::Constant Net::LDAP::Server Net::LDAP::Server::Test Math::Int64 DBD::SQLite IO::File::fcntl Digest::CRC && rm -rf ~/.cpanm
 
 #RUN cpanm install --force IO::Async::Notifier
 #RUN cpanm install IO::Async::OS
