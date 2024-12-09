@@ -3,9 +3,22 @@
 FROM debian:bookworm
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
+# If you want all the cpanm-based installs to run tests, pass:
+#   --build-arg CPANM_TEST=1
 ARG CPANM_TEST
 ENV CPANM_OPT=${CPANM_TEST:--n}
 ENV CPANM="cpanm${CPANM_OPT:+ $CPANM_OPT}"
+
+# This determines what branch (head or tag) we use to build cyruslibs.  We
+# would like to be tracking master, but as of this writing (2024-12-09) we need
+# to fix a conflict between cyrus-imapd and cyruslibs master branches.
+# -- rjbs, 2024-12-09
+ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v58
+
+# This determines what commit (sha1) we use to build Dovecot.  We don't have
+# much of a policy about testing or changing this, but: before making changes
+# to the Dockerfile or the built image, make sure they don't break things!
+ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
 
 # RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
 
@@ -199,7 +212,7 @@ cd dovecot.git
 git init
 git remote add github https://github.com/dovecot/core.git
 # NOTE: change this only after testing
-git fetch --depth 1 github c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
+git fetch --depth 1 github $DOVECOT_COMMIT
 git checkout FETCH_HEAD
 ./autogen.sh
 ./configure --enable-silent-rules
@@ -228,7 +241,7 @@ WORKDIR /srv
 RUN <<EOF
 # clone and build cyruslibs
 set -e
-git clone --depth 1 --shallow-submodules -b cyruslibs-fastmail-v58 \
+git clone --depth 1 --shallow-submodules -b $CYRUSLIBS_BRANCH \
   https://github.com/cyrusimap/cyruslibs.git cyruslibs.git
 cd cyruslibs.git
 git fetch
