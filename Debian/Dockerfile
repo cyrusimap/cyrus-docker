@@ -190,16 +190,25 @@ EOF
 WORKDIR /srv
 RUN <<EOF
 # clone and build dovecot.git
+# This one is weird.  We want a specific commit, just for the sake of pinning
+# to known-good.  We install so that imaptest (below) can rely on the installed
+# Dovecot even after we remove the source.  We remove the source because it's a
+# whole lot of bytes that we don't really need to ship in the Docker image.
 set -e
 git config --global http.sslverify false
-git clone https://github.com/dovecot/core.git dovecot.git
+mkdir dovecot.git
 cd dovecot.git
-git fetch
+git init
+git remote add github https://github.com/dovecot/core.git
 # NOTE: change this only after testing
-git checkout c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
+git fetch --depth 1 github c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
+git checkout FETCH_HEAD
 ./autogen.sh
 ./configure --enable-silent-rules
 make -j 8
+make install
+cd ..
+rm -rf dovecot.git
 EOF
 
 WORKDIR /srv
@@ -212,7 +221,7 @@ cd imaptest.git
 git fetch
 # RUN git checkout origin/cyrus
 sh autogen.sh
-./configure --enable-silent-rules --with-dovecot=/srv/dovecot.git
+./configure --enable-silent-rules
 make -j 8
 # need to run it once as root to link up libs
 ./src/imaptest || true
