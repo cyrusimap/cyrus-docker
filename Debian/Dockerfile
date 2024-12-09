@@ -3,6 +3,10 @@
 FROM debian:bookworm
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
+ARG CPANM_TEST
+ENV CPANM_OPT=${CPANM_TEST:--n}
+ENV CPANM="cpanm${CPANM_OPT:+ $CPANM_OPT}"
+
 # RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
 
 # RUN echo "deb http://archive.debian.org/debian/ jessie-backports main contrib" >> /etc/apt/sources.list.d/sources.list
@@ -150,20 +154,23 @@ RUN git config --global http.sslverify false && \
 #RUN cpanm install XML::Spice
 #RUN cpanm install Net::Async::WebSocket::Client
 
-RUN cpanm install Term::ReadLine Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Convert::Base64 File::LibMagic Net::LDAP::Constant Net::LDAP::Server Net::LDAP::Server::Test Math::Int64 DBD::SQLite IO::File::fcntl Digest::CRC && rm -rf ~/.cpanm
+RUN $CPANM Term::ReadLine Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Convert::Base64 File::LibMagic Net::LDAP::Constant Net::LDAP::Server Net::LDAP::Server::Test Math::Int64 DBD::SQLite IO::File::fcntl Digest::CRC && rm -rf ~/.cpanm
 
 #RUN cpanm install --force IO::Async::Notifier
 #RUN cpanm install IO::Async::OS
 #RUN cpanm install IO::Async::Stream
 #RUN cpanm install IO::Async::Loop
 
-
-RUN git config --global http.sslverify false && \
-    git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git \
-    JMAP-TestSuite.git
-
-WORKDIR /srv/JMAP-TestSuite.git
-RUN cpanm --installdeps .
+WORKDIR /srv
+RUN <<EOF
+# clone and prep JMAP Test Suite
+set -e
+git config --global http.sslverify false
+git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git JMAP-TestSuite.git
+cd JMAP-TestSuite.git
+$CPANM --installdeps .
+rm -rf ~/.cpanm
+EOF
 
 WORKDIR /srv
 RUN <<EOF
