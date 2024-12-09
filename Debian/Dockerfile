@@ -103,8 +103,6 @@ RUN apt-get update && apt-get -y install \
 
 # RUN apt-get -t jessie-backports install "cmake" -y
 
-RUN dpkg -l
-
 RUN <<EOF
 set -e
 groupadd -r saslauth
