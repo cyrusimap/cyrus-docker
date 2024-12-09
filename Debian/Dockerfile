@@ -1,3 +1,5 @@
+# If you change the default source image, update the README, which references
+# the underlying Debian version.
 FROM debian:bookworm
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
