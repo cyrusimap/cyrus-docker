@@ -137,36 +137,6 @@ WORKDIR /srv
 RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
-#RUN cpanm Convert::Color
-#RUN cpanm Convert::Color::XTerm
-#RUN cpanm Commandable::Invocation
-#RUN cpanm Devel::MAT::Dumper
-#RUN cpanm Heap
-#RUN cpanm List::UtilsBy
-#RUN cpanm Module::Pluggable
-#RUN cpanm Module::Pluggable::Object
-#RUN cpanm Future
-#RUN cpanm Future::Utils
-#RUN cpanm String::Tagged
-#RUN cpanm String::Tagged::Terminal
-#RUN cpanm Syntax::Keyword::Try
-#RUN cpanm Struct::Dumb
-#RUN cpanm Term::ReadLine
-#RUN cpanm Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
-#RUN cpanm Convert::Base64 File::LibMagic;
-#RUN cpanm Net::LDAP::Constant
-#RUN cpanm Net::LDAP::Server
-#RUN cpanm Net::LDAP::Server::Test
-#RUN cpanm Math::Int64
-#RUN cpanm File::Find::Rule
-#RUN cpanm Pod::Coverage
-#RUN cpanm Test::Pod::Coverage
-#RUN cpanm Data::UUID
-#RUN cpanm Tie::DataUUID
-#RUN cpanm XML::Fast
-#RUN cpanm XML::Spice
-#RUN cpanm Net::Async::WebSocket::Client
-
 RUN <<EOF
 # install Perl prerequisites from CPAN
 $CPANM Term::ReadLine \
@@ -184,11 +154,6 @@ $CPANM Term::ReadLine \
        Digest::CRC \
 && rm -rf ~/.cpanm
 EOF
-
-#RUN cpanm --force IO::Async::Notifier
-#RUN cpanm IO::Async::OS
-#RUN cpanm IO::Async::Stream
-#RUN cpanm IO::Async::Loop
 
 WORKDIR /srv
 RUN <<EOF
