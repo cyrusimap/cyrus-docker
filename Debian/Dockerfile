@@ -125,42 +125,42 @@ WORKDIR /srv
 RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
-#RUN cpanm install Convert::Color
-#RUN cpanm install Convert::Color::XTerm
-#RUN cpanm install Commandable::Invocation
-#RUN cpanm install Devel::MAT::Dumper
-#RUN cpanm install Heap
-#RUN cpanm install List::UtilsBy
-#RUN cpanm install Module::Pluggable
-#RUN cpanm install Module::Pluggable::Object
-#RUN cpanm install Future
-#RUN cpanm install Future::Utils
-#RUN cpanm install String::Tagged
-#RUN cpanm install String::Tagged::Terminal
-#RUN cpanm install Syntax::Keyword::Try
-#RUN cpanm install Struct::Dumb
-#RUN cpanm install Term::ReadLine
-#RUN cpanm install Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
-#RUN cpanm install Convert::Base64 File::LibMagic;
-#RUN cpanm install Net::LDAP::Constant
-#RUN cpanm install Net::LDAP::Server
-#RUN cpanm install Net::LDAP::Server::Test
-#RUN cpanm install Math::Int64
-#RUN cpanm install File::Find::Rule
-#RUN cpanm install Pod::Coverage
-#RUN cpanm install Test::Pod::Coverage
-#RUN cpanm install Data::UUID
-#RUN cpanm install Tie::DataUUID
-#RUN cpanm install XML::Fast
-#RUN cpanm install XML::Spice
-#RUN cpanm install Net::Async::WebSocket::Client
+#RUN cpanm Convert::Color
+#RUN cpanm Convert::Color::XTerm
+#RUN cpanm Commandable::Invocation
+#RUN cpanm Devel::MAT::Dumper
+#RUN cpanm Heap
+#RUN cpanm List::UtilsBy
+#RUN cpanm Module::Pluggable
+#RUN cpanm Module::Pluggable::Object
+#RUN cpanm Future
+#RUN cpanm Future::Utils
+#RUN cpanm String::Tagged
+#RUN cpanm String::Tagged::Terminal
+#RUN cpanm Syntax::Keyword::Try
+#RUN cpanm Struct::Dumb
+#RUN cpanm Term::ReadLine
+#RUN cpanm Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
+#RUN cpanm Convert::Base64 File::LibMagic;
+#RUN cpanm Net::LDAP::Constant
+#RUN cpanm Net::LDAP::Server
+#RUN cpanm Net::LDAP::Server::Test
+#RUN cpanm Math::Int64
+#RUN cpanm File::Find::Rule
+#RUN cpanm Pod::Coverage
+#RUN cpanm Test::Pod::Coverage
+#RUN cpanm Data::UUID
+#RUN cpanm Tie::DataUUID
+#RUN cpanm XML::Fast
+#RUN cpanm XML::Spice
+#RUN cpanm Net::Async::WebSocket::Client
 
 RUN $CPANM Term::ReadLine Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Convert::Base64 File::LibMagic Net::LDAP::Constant Net::LDAP::Server Net::LDAP::Server::Test Math::Int64 DBD::SQLite IO::File::fcntl Digest::CRC && rm -rf ~/.cpanm
 
-#RUN cpanm install --force IO::Async::Notifier
-#RUN cpanm install IO::Async::OS
-#RUN cpanm install IO::Async::Stream
-#RUN cpanm install IO::Async::Loop
+#RUN cpanm --force IO::Async::Notifier
+#RUN cpanm IO::Async::OS
+#RUN cpanm IO::Async::Stream
+#RUN cpanm IO::Async::Loop
 
 WORKDIR /srv
 RUN <<EOF
