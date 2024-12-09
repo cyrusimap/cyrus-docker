@@ -113,10 +113,6 @@ RUN groupadd -r saslauth ; \
 WORKDIR /srv
 
 RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/cyruslibs.git \
-    cyruslibs.git
-
-RUN git config --global http.sslverify false && \
     git clone https://github.com/dovecot/core.git \
     dovecot.git
 
@@ -202,12 +198,21 @@ RUN make -j 8
 # need to run it once as root to link up libs
 RUN src/imaptest || true
 
-WORKDIR /srv/cyruslibs.git
-RUN git fetch
-RUN git checkout origin/master
-RUN git submodule init
-RUN git submodule update
-RUN ./build.sh
+WORKDIR /srv
+RUN <<EOF
+set -e
+git config --global http.sslverify false
+git clone --depth 1 --shallow-submodules -b cyruslibs-fastmail-v58 \
+  https://github.com/cyrusimap/cyruslibs.git cyruslibs.git
+cd cyruslibs.git
+git fetch
+# RUN git checkout origin/master
+git submodule init
+git submodule update
+./build.sh
+cd ..
+rm -rf cyruslibs.git
+EOF
 
 RUN mkdir /tmp/cass
 RUN chown cyrus:mail /tmp/cass
