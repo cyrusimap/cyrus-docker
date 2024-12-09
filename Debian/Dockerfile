@@ -104,6 +104,7 @@ RUN apt-get update && apt-get -y install \
 # RUN apt-get -t jessie-backports install "cmake" -y
 
 RUN <<EOF
+# set up users and groups
 set -e
 groupadd -r saslauth
 
@@ -166,6 +167,7 @@ RUN cpanm --installdeps .
 
 WORKDIR /srv
 RUN <<EOF
+# install Mail::JMAPTalk
 set -e
 git config --global http.sslverify false
 git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/Mail-JMAPTalk.git Mail-JMAPTalk.git
@@ -180,6 +182,7 @@ EOF
 
 WORKDIR /srv
 RUN <<EOF
+# clone and build dovecot.git
 set -e
 git config --global http.sslverify false
 git clone https://github.com/dovecot/core.git dovecot.git
@@ -194,6 +197,7 @@ EOF
 
 WORKDIR /srv
 RUN <<EOF
+# clone and build imaptest.git
 set -e
 git config --global http.sslverify false
 git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git imaptest.git
@@ -209,6 +213,7 @@ EOF
 
 WORKDIR /srv
 RUN <<EOF
+# clone and build cyruslibs
 set -e
 git config --global http.sslverify false
 git clone --depth 1 --shallow-submodules -b cyruslibs-fastmail-v58 \
