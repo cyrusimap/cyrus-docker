@@ -32,7 +32,6 @@ RUN apt-get update && apt-get -y install \
     bison \
     build-essential \
     check \
-    clang \
     cmake \
     comerr-dev \
     cpanminus \
