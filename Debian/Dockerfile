@@ -108,20 +108,21 @@ RUN apt-get update && apt-get -y install \
 # RUN apt-get -t jessie-backports install "cmake" -y
 
 RUN <<EOF
-# set up users and groups
+# set up users, groups, and config
 set -e
 groupadd -r saslauth
 
-# The "mail" group exists on stock Debian.
+# The "mail" group exists on stock Debian, we don't need to add it here.
 # groupadd -r mail
 
 useradd -c "Cyrus IMAP Server" -d /var/lib/imap -g mail -G saslauth -s /bin/bash -r cyrus
+
+git config --global http.sslverify false
 EOF
 
 WORKDIR /srv
 
-RUN git config --global http.sslverify false && \
-    git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git \
+RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
 #RUN cpanm install Convert::Color
@@ -165,7 +166,6 @@ WORKDIR /srv
 RUN <<EOF
 # clone and prep JMAP Test Suite
 set -e
-git config --global http.sslverify false
 git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git JMAP-TestSuite.git
 cd JMAP-TestSuite.git
 $CPANM --installdeps .
@@ -176,7 +176,6 @@ WORKDIR /srv
 RUN <<EOF
 # install Mail::JMAPTalk
 set -e
-git config --global http.sslverify false
 git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/Mail-JMAPTalk.git Mail-JMAPTalk.git
 cd Mail-JMAPTalk.git
 perl Makefile.PL
@@ -195,7 +194,6 @@ RUN <<EOF
 # Dovecot even after we remove the source.  We remove the source because it's a
 # whole lot of bytes that we don't really need to ship in the Docker image.
 set -e
-git config --global http.sslverify false
 mkdir dovecot.git
 cd dovecot.git
 git init
@@ -215,7 +213,6 @@ WORKDIR /srv
 RUN <<EOF
 # clone and build imaptest.git
 set -e
-git config --global http.sslverify false
 git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git imaptest.git
 cd imaptest.git
 git fetch
@@ -231,7 +228,6 @@ WORKDIR /srv
 RUN <<EOF
 # clone and build cyruslibs
 set -e
-git config --global http.sslverify false
 git clone --depth 1 --shallow-submodules -b cyruslibs-fastmail-v58 \
   https://github.com/cyrusimap/cyruslibs.git cyruslibs.git
 cd cyruslibs.git
