@@ -168,7 +168,23 @@ RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAV
 #RUN cpanm XML::Spice
 #RUN cpanm Net::Async::WebSocket::Client
 
-RUN $CPANM Term::ReadLine Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk Convert::Base64 File::LibMagic Net::LDAP::Constant Net::LDAP::Server Net::LDAP::Server::Test Math::Int64 DBD::SQLite IO::File::fcntl Digest::CRC && rm -rf ~/.cpanm
+RUN <<EOF
+# install Perl prerequisites from CPAN
+$CPANM Term::ReadLine \
+       Mail::IMAPTalk \
+       Net::CalDAVTalk \
+       Net::CardDAVTalk \
+       Convert::Base64 \
+       File::LibMagic \
+       Net::LDAP::Constant \
+       Net::LDAP::Server \
+       Net::LDAP::Server::Test \
+       Math::Int64 \
+       DBD::SQLite \
+       IO::File::fcntl \
+       Digest::CRC \
+&& rm -rf ~/.cpanm
+EOF
 
 #RUN cpanm --force IO::Async::Notifier
 #RUN cpanm IO::Async::OS
