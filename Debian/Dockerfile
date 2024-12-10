@@ -1,6 +1,7 @@
 # If you change the default source image, update the README, which references
 # the underlying Debian version.
-FROM debian:bookworm
+ARG DEBIAN_VERSION=bookworm
+FROM debian:$DEBIAN_VERSION
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
 # If you want all the cpanm-based installs to run tests, pass:
