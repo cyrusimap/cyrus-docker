@@ -246,15 +246,15 @@ cd ..
 $CLEANUP && rm -rf cyruslibs.git || true
 EOF
 
+ADD entrypoint.sh functions.sh /srv
+RUN chmod 755 /srv/entrypoint.sh
+
 RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
 
-WORKDIR /
 ENV IMAGE=bookworm
 ADD dot.bashrc /root/.bashrc
-ADD entrypoint.sh functions.sh /
-RUN chmod 755 /entrypoint.sh
 
 # Disable Kernel Log Input module in rsyslog.
 RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
 
-CMD ["/entrypoint.sh"]
+CMD ["/srv/entrypoint.sh"]
