@@ -10,6 +10,9 @@ ARG CPANM_TEST
 ENV CPANM_OPT=${CPANM_TEST:--n}
 ENV CPANM="cpanm${CPANM_OPT:+ $CPANM_OPT}"
 
+# Set it to "false" to leave all the checkouts and build artifacts in place.
+ARG CLEANUP=true
+
 # This determines what branch (head or tag) we use to build cyruslibs.  We
 # would like to be tracking master, but as of this writing (2024-12-09) we need
 # to fix a conflict between cyrus-imapd and cyruslibs master branches.
@@ -155,12 +158,13 @@ RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAV
 
 RUN <<EOF
 # install Perl prerequisites from CPAN
+set -e
 $CPANM Mail::IMAPTalk \
        Net::CalDAVTalk \
        Net::CardDAVTalk \
        Convert::Base64 \
        IO::File::fcntl \
-&& rm -rf ~/.cpanm
+$CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
 WORKDIR /srv
@@ -170,7 +174,7 @@ set -e
 git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git JMAP-TestSuite.git
 cd JMAP-TestSuite.git
 $CPANM --installdeps .
-rm -rf ~/.cpanm
+$CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
 WORKDIR /srv
@@ -184,7 +188,7 @@ make
 make test
 make install
 cd ..
-rm -rf Mail-IMAPTalk.git
+$CLEANUP && rm -rf Mail-IMAPTalk.git || true
 EOF
 
 WORKDIR /srv
@@ -207,7 +211,7 @@ git checkout FETCH_HEAD
 make -j 8
 make install
 cd ..
-rm -rf dovecot.git
+$CLEANUP && rm -rf dovecot.git || true
 EOF
 
 WORKDIR /srv
@@ -236,7 +240,7 @@ git submodule init
 git submodule update
 ./build.sh
 cd ..
-rm -rf cyruslibs.git
+$CLEANUP && rm -rf cyruslibs.git || true
 EOF
 
 RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
