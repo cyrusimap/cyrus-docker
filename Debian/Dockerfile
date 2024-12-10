@@ -21,7 +21,10 @@ ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v58
 # to the Dockerfile or the built image, make sure they don't break things!
 ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
 
-RUN apt-get update && apt-get -y --no-install-recommends install \
+RUN <<EOF
+set -e
+apt-get update
+apt-get -y install \
     autoconf \
     automake \
     autotools-dev \
@@ -32,8 +35,9 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
     cmake \
     comerr-dev \
     cpanminus \
-    doxygen \
     debhelper \
+    docutils-common \
+    doxygen \
     flex \
     g++ \
     git \
@@ -129,6 +133,7 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
     libtest-deep-perl \
     libthrowable-perl \
     libwww-perl
+EOF
 
 RUN <<EOF
 # set up users, groups, and config
