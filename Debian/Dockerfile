@@ -103,7 +103,6 @@ apt-get -y install \
     libzephyr-dev \
     lsb-base \
     net-tools \
-    pandoc \
     perl \
     php-cli \
     php-curl \
