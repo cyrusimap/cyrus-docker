@@ -167,7 +167,6 @@ $CPANM Mail::IMAPTalk \
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
-WORKDIR /srv
 RUN <<EOF
 # clone and prep JMAP Test Suite
 set -e
@@ -177,7 +176,6 @@ $CPANM --installdeps .
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
-WORKDIR /srv
 RUN <<EOF
 # install Mail::JMAPTalk
 set -e
@@ -191,7 +189,6 @@ cd ..
 $CLEANUP && rm -rf Mail-IMAPTalk.git || true
 EOF
 
-WORKDIR /srv
 RUN <<EOF
 # clone and build dovecot.git
 # This one is weird.  We want a specific commit, just for the sake of pinning
@@ -214,7 +211,6 @@ cd ..
 $CLEANUP && rm -rf dovecot.git || true
 EOF
 
-WORKDIR /srv
 RUN <<EOF
 # clone and build imaptest.git
 set -e
@@ -228,7 +224,6 @@ make -j 8
 ./src/imaptest || true
 EOF
 
-WORKDIR /srv
 RUN <<EOF
 # clone and build cyruslibs
 set -e
