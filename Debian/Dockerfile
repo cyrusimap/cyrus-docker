@@ -25,6 +25,7 @@ ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v58
 ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
 
 RUN <<EOF
+# install prerequisites via apt-get
 set -e
 apt-get update
 apt-get -y install \
