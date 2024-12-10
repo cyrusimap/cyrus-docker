@@ -112,9 +112,23 @@ RUN apt-get update && apt-get -y install \
     wamerican \
     wget \
     xutils-dev \
-    zlib1g-dev
-
-# RUN apt-get -t jessie-backports install "cmake" -y
+    zlib1g-dev \
+    `# BEGIN Cyrus or Cassandane prereqs` \
+    libterm-readline-gnu-perl \
+    libfile-libmagic-perl \
+    libnet-ldap-perl \
+    libnet-ldap-server-perl \
+    libnet-ldap-server-test-perl \
+    libmath-int64-perl \
+    libdbd-sqlite3-perl \
+    libdigest-crc-perl \
+    `# BEGIN JMAP-TestSuite prereqs` \
+    libcryptx-perl \
+    libjson-maybexs-perl \
+    libmoose-perl \
+    libtest-deep-perl \
+    libthrowable-perl \
+    libwww-perl
 
 RUN <<EOF
 # set up users, groups, and config
@@ -136,19 +150,11 @@ RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAV
 
 RUN <<EOF
 # install Perl prerequisites from CPAN
-$CPANM Term::ReadLine \
-       Mail::IMAPTalk \
+$CPANM Mail::IMAPTalk \
        Net::CalDAVTalk \
        Net::CardDAVTalk \
        Convert::Base64 \
-       File::LibMagic \
-       Net::LDAP::Constant \
-       Net::LDAP::Server \
-       Net::LDAP::Server::Test \
-       Math::Int64 \
-       DBD::SQLite \
        IO::File::fcntl \
-       Digest::CRC \
 && rm -rf ~/.cpanm
 EOF
 
