@@ -240,13 +240,10 @@ EOF
 
 RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
 
-WORKDIR /root
-ENV IMAGE=bookworm
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/dot.bashrc /root/.bashrc
-
 WORKDIR /
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/entrypoint.sh /
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/functions.sh /
+ENV IMAGE=bookworm
+ADD dot.bashrc /root/.bashrc
+ADD entrypoint.sh functions.sh /
 RUN chmod 755 /entrypoint.sh
 
 # Disable Kernel Log Input module in rsyslog.
