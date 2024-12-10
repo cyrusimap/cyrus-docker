@@ -21,7 +21,7 @@ ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v58
 # to the Dockerfile or the built image, make sure they don't break things!
 ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
 
-RUN apt-get update && apt-get -y install \
+RUN apt-get update && apt-get -y --no-install-recommends install \
     autoconf \
     automake \
     autotools-dev \
