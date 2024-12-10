@@ -209,7 +209,6 @@ RUN <<EOF
 set -e
 git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git imaptest.git
 cd imaptest.git
-git fetch
 # RUN git checkout origin/cyrus
 sh autogen.sh
 ./configure --enable-silent-rules
@@ -225,7 +224,6 @@ set -e
 git clone --depth 1 --shallow-submodules -b $CYRUSLIBS_BRANCH \
   https://github.com/cyrusimap/cyruslibs.git cyruslibs.git
 cd cyruslibs.git
-git fetch
 # RUN git checkout origin/master
 git submodule init
 git submodule update
