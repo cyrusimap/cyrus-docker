@@ -28,7 +28,8 @@ RUN <<EOF
 # install prerequisites via apt-get
 set -e
 apt-get update
-apt-get -y install \
+apt-get -y install build-essential
+apt-get -y install --no-install-recommends \
     autoconf \
     automake \
     autotools-dev \
@@ -40,7 +41,6 @@ apt-get -y install \
     comerr-dev \
     cpanminus \
     debhelper \
-    docutils-common \
     doxygen \
     flex \
     g++ \
@@ -108,6 +108,8 @@ apt-get -y install \
     php-curl \
     pkg-config \
     po-debconf \
+    python3-docutils \
+    python3-pygments \
     rsync \
     rsyslog \
     sudo \
@@ -119,18 +121,22 @@ apt-get -y install \
     wamerican \
     wget \
     xutils-dev \
+    xxd \
     zlib1g-dev \
     `# BEGIN Cyrus or Cassandane prereqs` \
+    libclass-xsaccessor-perl \
     libdata-ical-perl \
     libdbd-sqlite3-perl \
     libdigest-crc-perl \
     libfile-libmagic-perl \
     libfile-mmagic-perl \
+    libhttp-daemon-perl \
     libmath-int64-perl \
     libnet-ldap-perl \
     libnet-ldap-server-perl \
     libnet-ldap-server-test-perl \
     libterm-readline-gnu-perl \
+    libtype-tiny-perl \
     `# BEGIN JMAP-TestSuite prereqs` \
     libcryptx-perl \
     libdata-guid-perl \
