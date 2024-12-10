@@ -21,10 +21,6 @@ ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v58
 # to the Dockerfile or the built image, make sure they don't break things!
 ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
 
-# RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
-
-# RUN echo "deb http://archive.debian.org/debian/ jessie-backports main contrib" >> /etc/apt/sources.list.d/sources.list
-
 RUN apt-get update && apt-get -y install \
     autoconf \
     automake \
