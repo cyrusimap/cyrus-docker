@@ -121,19 +121,27 @@ apt-get -y install \
     xutils-dev \
     zlib1g-dev \
     `# BEGIN Cyrus or Cassandane prereqs` \
-    libterm-readline-gnu-perl \
+    libdata-ical-perl \
+    libdbd-sqlite3-perl \
+    libdigest-crc-perl \
     libfile-libmagic-perl \
+    libfile-mmagic-perl \
+    libmath-int64-perl \
     libnet-ldap-perl \
     libnet-ldap-server-perl \
     libnet-ldap-server-test-perl \
-    libmath-int64-perl \
-    libdbd-sqlite3-perl \
-    libdigest-crc-perl \
+    libterm-readline-gnu-perl \
     `# BEGIN JMAP-TestSuite prereqs` \
     libcryptx-perl \
+    libdata-guid-perl \
+    libdata-printer-perl \
+    libemail-mime-perl \
     libjson-maybexs-perl \
     libmoose-perl \
+    libmoosex-role-parameterized-perl \
+    libparse-recdescent-perl \
     libtest-deep-perl \
+    libtest-routine-perl \
     libthrowable-perl \
     libwww-perl
 EOF
