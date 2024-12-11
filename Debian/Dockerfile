@@ -1,13 +1,35 @@
 # If you change the default source image, update the README, which references
 # the underlying Debian version.
-FROM debian:bookworm
+ARG DEBIAN_VERSION=bookworm
+FROM debian:$DEBIAN_VERSION
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
-# RUN echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99no-check-valid-until
+# If you want all the cpanm-based installs to run tests, pass:
+#   --build-arg CPANM_TEST=1
+ARG CPANM_TEST
+ENV CPANM_OPT=${CPANM_TEST:--n}
+ENV CPANM="cpanm${CPANM_OPT:+ $CPANM_OPT}"
 
-# RUN echo "deb http://archive.debian.org/debian/ jessie-backports main contrib" >> /etc/apt/sources.list.d/sources.list
+# Set it to "false" to leave all the checkouts and build artifacts in place.
+ARG CLEANUP=true
 
-RUN apt-get update && apt-get -y install \
+# This determines what branch (head or tag) we use to build cyruslibs.  We
+# would like to be tracking master, but as of this writing (2024-12-09) we need
+# to fix a conflict between cyrus-imapd and cyruslibs master branches.
+# -- rjbs, 2024-12-09
+ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v58
+
+# This determines what commit (sha1) we use to build Dovecot.  We don't have
+# much of a policy about testing or changing this, but: before making changes
+# to the Dockerfile or the built image, make sure they don't break things!
+ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
+
+RUN <<EOF
+# install prerequisites via apt-get
+set -e
+apt-get update
+apt-get -y install build-essential
+apt-get -y install --no-install-recommends \
     autoconf \
     automake \
     autotools-dev \
@@ -15,12 +37,11 @@ RUN apt-get update && apt-get -y install \
     bison \
     build-essential \
     check \
-    clang \
     cmake \
     comerr-dev \
     cpanminus \
-    doxygen \
     debhelper \
+    doxygen \
     flex \
     g++ \
     git \
@@ -82,12 +103,13 @@ RUN apt-get update && apt-get -y install \
     libzephyr-dev \
     lsb-base \
     net-tools \
-    pandoc \
     perl \
     php-cli \
     php-curl \
     pkg-config \
     po-debconf \
+    python3-docutils \
+    python3-pygments \
     rsync \
     rsyslog \
     sudo \
@@ -99,138 +121,145 @@ RUN apt-get update && apt-get -y install \
     wamerican \
     wget \
     xutils-dev \
-    zlib1g-dev
+    xxd \
+    zlib1g-dev \
+    `# BEGIN Cyrus or Cassandane prereqs` \
+    libclass-xsaccessor-perl \
+    libdata-ical-perl \
+    libdbd-sqlite3-perl \
+    libdigest-crc-perl \
+    libfile-libmagic-perl \
+    libfile-mmagic-perl \
+    libhttp-daemon-perl \
+    libmath-int64-perl \
+    libnet-ldap-perl \
+    libnet-ldap-server-perl \
+    libnet-ldap-server-test-perl \
+    libterm-readline-gnu-perl \
+    libtype-tiny-perl \
+    `# BEGIN JMAP-TestSuite prereqs` \
+    libcryptx-perl \
+    libdata-guid-perl \
+    libdata-printer-perl \
+    libemail-mime-perl \
+    libjson-maybexs-perl \
+    libmoose-perl \
+    libmoosex-role-parameterized-perl \
+    libparse-recdescent-perl \
+    libtest-deep-perl \
+    libtest-routine-perl \
+    libthrowable-perl \
+    libwww-perl
+EOF
 
-# RUN apt-get -t jessie-backports install "cmake" -y
+RUN <<EOF
+# set up users, groups, and config
+set -e
+groupadd -r saslauth
 
-RUN dpkg -l
+# The "mail" group exists on stock Debian, we don't need to add it here.
+# groupadd -r mail
 
-RUN groupadd -r saslauth ; \
-    groupadd -r mail ; \
-    useradd -c "Cyrus IMAP Server" -d /var/lib/imap \
-    -g mail -G saslauth -s /bin/bash -r cyrus
+useradd -c "Cyrus IMAP Server" -d /var/lib/imap -g mail -G saslauth -s /bin/bash -r cyrus
+
+git config --global http.sslverify false
+EOF
 
 WORKDIR /srv
 
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/cyruslibs.git \
-    cyruslibs.git
-
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/dovecot/core.git \
-    dovecot.git
-
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/imaptest.git \
-    imaptest.git
-
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/CalDAVTester.git \
+RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git \
     caldavtester.git
 
-#RUN cpanm install Convert::Color
-#RUN cpanm install Convert::Color::XTerm
-#RUN cpanm install Commandable::Invocation
-#RUN cpanm install Devel::MAT::Dumper
-#RUN cpanm install Heap
-#RUN cpanm install List::UtilsBy
-#RUN cpanm install Module::Pluggable
-#RUN cpanm install Module::Pluggable::Object
-#RUN cpanm install Future
-#RUN cpanm install Future::Utils
-#RUN cpanm install String::Tagged
-#RUN cpanm install String::Tagged::Terminal
-#RUN cpanm install Syntax::Keyword::Try
-#RUN cpanm install Struct::Dumb
-#RUN cpanm install Term::ReadLine
-#RUN cpanm install Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
-#RUN cpanm install Convert::Base64 File::LibMagic;
-#RUN cpanm install Net::LDAP::Constant
-#RUN cpanm install Net::LDAP::Server
-#RUN cpanm install Net::LDAP::Server::Test
-#RUN cpanm install Math::Int64
-#RUN cpanm install File::Find::Rule
-#RUN cpanm install Pod::Coverage
-#RUN cpanm install Test::Pod::Coverage
-#RUN cpanm install Data::UUID
-#RUN cpanm install Tie::DataUUID
-#RUN cpanm install XML::Fast
-#RUN cpanm install XML::Spice
-#RUN cpanm install Net::Async::WebSocket::Client
+RUN <<EOF
+# install Perl prerequisites from CPAN
+set -e
+$CPANM Mail::IMAPTalk \
+       Net::CalDAVTalk \
+       Net::CardDAVTalk \
+       Convert::Base64 \
+       IO::File::fcntl \
+$CLEANUP && rm -rf ~/.cpanm || true
+EOF
 
-RUN cpanm install Term::ReadLine
-RUN cpanm install Mail::IMAPTalk Net::CalDAVTalk Net::CardDAVTalk
-RUN cpanm install Convert::Base64 File::LibMagic;
-RUN cpanm install Net::LDAP::Constant
-RUN cpanm install Net::LDAP::Server
-RUN cpanm install Net::LDAP::Server::Test
-RUN cpanm install Math::Int64
-RUN cpanm install DBD::SQLite
-RUN cpanm install IO::File::fcntl
-RUN cpanm install Digest::CRC
+RUN <<EOF
+# clone and prep JMAP Test Suite
+set -e
+git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git JMAP-TestSuite.git
+cd JMAP-TestSuite.git
+$CPANM --installdeps .
+$CLEANUP && rm -rf ~/.cpanm || true
+EOF
 
-#RUN cpanm install --force IO::Async::Notifier
-#RUN cpanm install IO::Async::OS
-#RUN cpanm install IO::Async::Stream
-#RUN cpanm install IO::Async::Loop
+RUN <<EOF
+# install Mail::JMAPTalk
+set -e
+git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/Mail-JMAPTalk.git Mail-JMAPTalk.git
+cd Mail-JMAPTalk.git
+perl Makefile.PL
+make
+make test
+make install
+cd ..
+$CLEANUP && rm -rf Mail-IMAPTalk.git || true
+EOF
 
-
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/fastmail/JMAP-TestSuite.git \
-    JMAP-TestSuite.git
-
-WORKDIR /srv/JMAP-TestSuite.git
-RUN cpanm --installdeps .
-
-WORKDIR /srv
-
-RUN git config --global http.sslverify false && \
-    git clone https://github.com/cyrusimap/Mail-JMAPTalk.git \
-    Mail-JMAPTalk.git
-    
-WORKDIR /srv/Mail-JMAPTalk.git
-RUN perl Makefile.PL
-RUN make
-RUN make test
-RUN make install
-
-WORKDIR /srv/dovecot.git
-RUN git fetch
+RUN <<EOF
+# clone and build dovecot.git
+# This one is weird.  We want a specific commit, just for the sake of pinning
+# to known-good.  We install so that imaptest (below) can rely on the installed
+# Dovecot even after we remove the source.  We remove the source because it's a
+# whole lot of bytes that we don't really need to ship in the Docker image.
+set -e
+mkdir dovecot.git
+cd dovecot.git
+git init
+git remote add github https://github.com/dovecot/core.git
 # NOTE: change this only after testing
-RUN git checkout c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
-RUN ./autogen.sh
-RUN ./configure --enable-silent-rules
-RUN make -j 8
+git fetch --depth 1 github $DOVECOT_COMMIT
+git checkout FETCH_HEAD
+./autogen.sh
+./configure --enable-silent-rules
+make -j 8
+make install
+cd ..
+$CLEANUP && rm -rf dovecot.git || true
+EOF
 
-WORKDIR /srv/imaptest.git
-RUN git fetch
-RUN git checkout origin/cyrus
-RUN sh autogen.sh
-RUN ./configure --enable-silent-rules --with-dovecot=/srv/dovecot.git
-RUN make -j 8
+RUN <<EOF
+# clone and build imaptest.git
+set -e
+git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git imaptest.git
+cd imaptest.git
+# RUN git checkout origin/cyrus
+sh autogen.sh
+./configure --enable-silent-rules
+make -j 8
 # need to run it once as root to link up libs
-RUN src/imaptest || true
+./src/imaptest || true
+EOF
 
-WORKDIR /srv/cyruslibs.git
-RUN git fetch
-RUN git checkout origin/master
-RUN git submodule init
-RUN git submodule update
-RUN ./build.sh
+RUN <<EOF
+# clone and build cyruslibs
+set -e
+git clone --depth 1 --shallow-submodules -b $CYRUSLIBS_BRANCH \
+  https://github.com/cyrusimap/cyruslibs.git cyruslibs.git
+cd cyruslibs.git
+# RUN git checkout origin/master
+git submodule init
+git submodule update
+./build.sh
+cd ..
+$CLEANUP && rm -rf cyruslibs.git || true
+EOF
 
-RUN mkdir /tmp/cass
-RUN chown cyrus:mail /tmp/cass
+ADD entrypoint.sh functions.sh /srv
+RUN chmod 755 /srv/entrypoint.sh
 
-WORKDIR /root
-ENV IMAGE=bookworm
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/dot.bashrc /root/.bashrc
+RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
 
-WORKDIR /
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/entrypoint.sh /
-ADD https://raw.githubusercontent.com/cyrusimap/cyrus-docker/master/Debian/functions.sh /
-RUN chmod 755 /entrypoint.sh
+ADD dot.bashrc /root/.bashrc
 
 # Disable Kernel Log Input module in rsyslog.
 RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
 
-CMD ["/entrypoint.sh"]
+CMD ["/srv/entrypoint.sh"]
