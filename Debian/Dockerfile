@@ -257,7 +257,6 @@ RUN chmod 755 /srv/entrypoint.sh
 
 RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
 
-ENV IMAGE=bookworm
 ADD dot.bashrc /root/.bashrc
 
 # Disable Kernel Log Input module in rsyslog.
