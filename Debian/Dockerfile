@@ -169,8 +169,10 @@ EOF
 
 WORKDIR /srv
 
-RUN git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git \
-    caldavtester.git
+RUN <<EOF
+# clone CalDAVTester
+git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git caldavtester.git
+EOF
 
 RUN <<EOF
 # install Perl prerequisites from CPAN
