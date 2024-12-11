@@ -171,7 +171,7 @@ WORKDIR /srv
 
 RUN <<EOF
 # clone CalDAVTester
-git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git caldavtester.git
+git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git
 EOF
 
 RUN <<EOF
@@ -188,8 +188,8 @@ EOF
 RUN <<EOF
 # clone and prep JMAP Test Suite
 set -e
-git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git JMAP-TestSuite.git
-cd JMAP-TestSuite.git
+git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git
+cd JMAP-TestSuite
 $CPANM --installdeps .
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
@@ -197,14 +197,14 @@ EOF
 RUN <<EOF
 # install Mail::JMAPTalk
 set -e
-git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/Mail-JMAPTalk.git Mail-JMAPTalk.git
-cd Mail-JMAPTalk.git
+git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/Mail-JMAPTalk.git
+cd Mail-JMAPTalk
 perl Makefile.PL
 make
 make test
 make install
 cd ..
-$CLEANUP && rm -rf Mail-IMAPTalk.git || true
+$CLEANUP && rm -rf Mail-IMAPTalk || true
 EOF
 
 RUN <<EOF
@@ -214,8 +214,8 @@ RUN <<EOF
 # Dovecot even after we remove the source.  We remove the source because it's a
 # whole lot of bytes that we don't really need to ship in the Docker image.
 set -e
-mkdir dovecot.git
-cd dovecot.git
+mkdir dovecot
+cd dovecot
 git init
 git remote add github https://github.com/dovecot/core.git
 # NOTE: change this only after testing
@@ -226,14 +226,14 @@ git checkout FETCH_HEAD
 make -j 8
 make install
 cd ..
-$CLEANUP && rm -rf dovecot.git || true
+$CLEANUP && rm -rf dovecot || true
 EOF
 
 RUN <<EOF
 # clone and build imaptest.git
 set -e
-git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git imaptest.git
-cd imaptest.git
+git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git
+cd imaptest
 # RUN git checkout origin/cyrus
 sh autogen.sh
 ./configure --enable-silent-rules
@@ -246,14 +246,14 @@ RUN <<EOF
 # clone and build cyruslibs
 set -e
 git clone --depth 1 --shallow-submodules -b $CYRUSLIBS_BRANCH \
-  https://github.com/cyrusimap/cyruslibs.git cyruslibs.git
-cd cyruslibs.git
+  https://github.com/cyrusimap/cyruslibs.git
+cd cyruslibs
 # RUN git checkout origin/master
 git submodule init
 git submodule update
 ./build.sh
 cd ..
-$CLEANUP && rm -rf cyruslibs.git || true
+$CLEANUP && rm -rf cyruslibs || true
 EOF
 
 ADD entrypoint.sh functions.sh /srv

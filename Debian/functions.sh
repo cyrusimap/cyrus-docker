@@ -8,14 +8,14 @@ function _cyrusclone {
     pushd /srv/
 
     git config --global http.sslverify false
-    git clone https://github.com/cyrusimap/cyrus-imapd.git cyrus-imapd.git
+    git clone https://github.com/cyrusimap/cyrus-imapd.git
 
     popd >&3
     return 0
 }
 
 function _cyrusbuild {
-    pushd /srv/cyrus-imapd.git >&3
+    pushd /srv/cyrus-imapd >&3
 
     if [ -z "$TRAVIS_PULL_REQUEST" -o "$TRAVIS_PULL_REQUEST" = "false" ];
     then
@@ -59,14 +59,14 @@ function _cyrusbuild {
 
     retval=$(_shell tools/build-with-cyruslibs.sh)
 
-    # /srv/cyrus-imapd.git
+    # /srv/cyrus-imapd
     popd >&3
 
     return ${retval}
 }
 
 function _updatejmaptestsuite {
-    pushd /srv/JMAP-TestSuite.git >&3
+    pushd /srv/JMAP-TestSuite >&3
 
     git fetch
     git checkout ${JMAPTESTERBRANCH:-"origin/master"}
@@ -79,7 +79,7 @@ function _updatejmaptestsuite {
 }
 
 function _cassandane {
-    pushd /srv/cyrus-imapd.git/cassandane >&3
+    pushd /srv/cyrus-imapd/cassandane >&3
 
     cp -af cassandane.ini.dockertests cassandane.ini
     chown cyrus:mail cassandane.ini
