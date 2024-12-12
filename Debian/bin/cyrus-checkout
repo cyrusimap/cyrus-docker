@@ -1,0 +1,27 @@
+#!/usr/bin/perl
+use v5.36.0;
+use Path::Tiny;
+
+my $root = '/srv';
+my $repo = 'https://github.com/cyrusimap/cyrus-imapd.git';
+my $head = 'master';
+
+# Not yet initialized.  Clone!
+unless (-d "$root/cyrus-imapd") {
+  system(qw(git clone -o github), $repo);
+  if ($?) {
+    die "problems cloning $repo\n";
+  }
+
+  exit;
+}
+
+# Already there.  Fetch and update.
+chdir("$root/cyrus-imapd") || die "can't chdir: $!\n";
+
+system(qw(git fetch github));
+if ($?) {
+  die "problems fetching from remote 'github'\n";
+}
+
+system(qw(git switch -C), $head, "github/$head");
