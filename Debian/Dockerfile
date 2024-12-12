@@ -266,4 +266,5 @@ ADD dot.bashrc /root/.bashrc
 # Disable Kernel Log Input module in rsyslog.
 RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
 
+ENV PATH="/srv/bin:${PATH}"
 CMD ["/srv/entrypoint.sh"]
