@@ -27,6 +27,14 @@ unless (-e "cassandane.ini") {
   path('cassandane.ini')->spew(@lines);
 }
 
+# XXX This is transitional, while we haven't updated cyrus-imap.git to
+# eliminate the .git in path names that existed prior to recent commits.
+{
+  my @lines = path('cassandane.ini')->lines;
+  s{/srv/[-A-Za-z]+\K.git}{}g for @lines;
+  path('cassandane.ini')->spew(@lines);
+}
+
 system(qw(make));
 Process::Status->assert_ok('Cassandane make');
 
