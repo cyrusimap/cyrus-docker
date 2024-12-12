@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+set -e
+cyrus-checkout
+cyrus-build
+cyrus-test

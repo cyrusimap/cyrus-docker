@@ -182,6 +182,7 @@ $CPANM Mail::IMAPTalk \
        Net::CardDAVTalk \
        Convert::Base64 \
        IO::File::fcntl \
+       Process::Status \
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
@@ -256,8 +257,7 @@ cd ..
 $CLEANUP && rm -rf cyruslibs || true
 EOF
 
-ADD entrypoint.sh functions.sh /srv
-RUN chmod 755 /srv/entrypoint.sh
+COPY bin /srv/bin
 
 RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
 
@@ -267,4 +267,5 @@ ADD dot.bashrc /root/.bashrc
 RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
 
 ENV PATH="/srv/bin:${PATH}"
-CMD ["/srv/entrypoint.sh"]
+
+CMD ["/srv/bin/cyrus-build-and-test"]
