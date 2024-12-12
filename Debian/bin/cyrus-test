@@ -1,6 +1,11 @@
 #!/usr/bin/perl
 use v5.36.0;
 
+unless (-e '/run/rsyslogd.pid') {
+  system('/usr/sbin/rsyslogd');
+  if ($?) { die "problems starting rsyslogd\n"; }
+}
+
 my $root = "/srv/cyrus-imapd/cassandane";
 chdir $root or die "can't chdir to $root: $!";
 
