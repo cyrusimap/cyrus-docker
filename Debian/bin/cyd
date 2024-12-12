@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+use v5.36.0;
+use lib '/srv/bin/lib';
+
+binmode *STDOUT, ':encoding(utf-8)';
+binmode *STDERR, ':encoding(utf-8)';
+
+my $is_tty = -t *STDOUT;
+
+unless ($is_tty) {
+  # Why //=?  So you can, in a pinch, undisable them without a TTY by setting
+  # it to a 0.
+  $ENV{ANSI_COLORS_DISABLED} //= 1;
+}
+
+use Cyrus::Docker;
+Cyrus::Docker->run;

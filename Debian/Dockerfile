@@ -150,7 +150,8 @@ apt-get -y install --no-install-recommends \
     libtest-routine-perl \
     libthrowable-perl \
     libwww-perl \
-    `# BEGIN purely to make debugging less awful` \
+    `# BEGIN for cyrus-docker or just quality of life` \
+    libapp-cmd-perl \
     less
 EOF
 
@@ -268,4 +269,4 @@ RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
 
 ENV PATH="/srv/bin:${PATH}"
 
-CMD ["/srv/bin/cyrus-build-and-test"]
+CMD ["cyd", "shell"]
