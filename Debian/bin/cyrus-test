@@ -35,7 +35,7 @@ unless (-e "cassandane.ini") {
   path('cassandane.ini')->spew(@lines);
 }
 
-system(qw(make));
+system(qw(make -j 12));
 Process::Status->assert_ok('Cassandane make');
 
 my @opts = $ENV{CASSANDANEOPTS} ? $ENV{CASSANDANEOPTS} : ();
@@ -44,7 +44,7 @@ system(
   qw(
     setpriv --reuid=cyrus --regid=mail
             --clear-groups --inh-caps=-all
-            ./testrunner.pl -f pretty -j 4
+            ./testrunner.pl -f pretty -j 12
   ),
   @opts,
 );
