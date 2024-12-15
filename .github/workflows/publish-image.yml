@@ -35,7 +35,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=bookworm
+            type=schedule
+            type=ref,event=branch
+            type=raw,value=bookworm,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - name: Build and push Docker image
         id: push
