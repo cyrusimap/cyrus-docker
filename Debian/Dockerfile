@@ -149,7 +149,9 @@ apt-get -y install --no-install-recommends \
     libtest-deep-perl \
     libtest-routine-perl \
     libthrowable-perl \
-    libwww-perl
+    libwww-perl \
+    `# BEGIN purely to make debugging less awful` \
+    less
 EOF
 
 RUN <<EOF
