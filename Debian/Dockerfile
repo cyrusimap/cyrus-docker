@@ -152,7 +152,8 @@ apt-get -y install --no-install-recommends \
     libwww-perl \
     `# BEGIN for cyrus-docker or just quality of life` \
     libapp-cmd-perl \
-    less
+    less \
+    tini
 EOF
 
 RUN <<EOF

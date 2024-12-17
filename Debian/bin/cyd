@@ -2,6 +2,10 @@
 use v5.36.0;
 use lib '/srv/bin/lib';
 
+if ($$ == 1) {
+  exec "tini", "--", $0, @ARGV;
+}
+
 binmode *STDOUT, ':encoding(utf-8)';
 binmode *STDERR, ':encoding(utf-8)';
 
