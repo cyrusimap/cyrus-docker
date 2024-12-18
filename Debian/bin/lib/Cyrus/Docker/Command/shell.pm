@@ -24,6 +24,11 @@ sub do_motd {
   $menu =~ s{([/|\\]+)}{colored(['bright_cyan'], "$1")}ge;
   $menu =~ s{• \K([^-]+)}{colored(['bright_yellow'], "$1")}ge;
   print $menu;
+
+  unless (-t *STDOUT) {
+    say "❗️ It looks like you ran this from a non-interactive container.";
+    say "❗️ You probably want to use: docker run -ti [image]";
+  }
 }
 
 sub execute ($self, $opt, $args) {
