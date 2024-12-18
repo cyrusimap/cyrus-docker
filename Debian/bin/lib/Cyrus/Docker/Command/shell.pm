@@ -28,6 +28,7 @@ sub do_motd {
   unless (-t *STDOUT) {
     say "❗️ It looks like you ran this from a non-interactive container.";
     say "❗️ You probably want to use: docker run -ti [image]";
+    exit;
   }
 }
 
