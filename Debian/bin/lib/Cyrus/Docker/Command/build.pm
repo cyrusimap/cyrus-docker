@@ -16,9 +16,6 @@ sub execute ($self, $opt, $args) {
 
   say "building cyrusversion $version";
 
-  system('git clean -dfx');
-  Process::Status->assert_ok("git clean");
-
   $ENV{CFLAGS}="-g -W -Wall -Wextra -Werror";
 
   my @configopts = qw(
