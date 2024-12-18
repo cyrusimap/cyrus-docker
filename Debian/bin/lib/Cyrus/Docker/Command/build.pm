@@ -9,6 +9,13 @@ sub execute ($self, $opt, $args) {
   my $root = "/srv/cyrus-imapd";
   chdir $root or die "can't chdir to $root: $!";
 
+  my $version = `./tools/git-version.sh`;
+  Process::Status->assert_ok("determining git version");
+
+  chomp $version;
+
+  say "building cyrusversion $version";
+
   system('git clean -dfx');
   Process::Status->assert_ok("git clean");
 
