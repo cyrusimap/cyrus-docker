@@ -16,7 +16,7 @@ sub do_motd {
     /////          ||||  • cyd checkout - check out cyrus-imapd.git
     \\\\\          ||||  • cyd build    - build your checked out cyrus-imapd
       \\\\\        ||||  • cyd test     - run the cyrus-imapd test suite
-        \\\\\      ||||
+        \\\\\      ||||  • cyd smoke    - check out, build and test
           \\\\\    ||||
             \\\\\  ||||
   END
