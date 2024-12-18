@@ -31,14 +31,6 @@ sub execute ($self, $opt, $args) {
     path('cassandane.ini')->spew(@lines);
   }
 
-  # XXX This is transitional, while we haven't updated cyrus-imap.git to
-  # eliminate the .git in path names that existed prior to recent commits.
-  {
-    my @lines = path('cassandane.ini')->lines;
-    s{/srv/[-A-Za-z]+\K.git}{}g for @lines;
-    path('cassandane.ini')->spew(@lines);
-  }
-
   system(qw(make -j 12));
   Process::Status->assert_ok('Cassandane make');
 
