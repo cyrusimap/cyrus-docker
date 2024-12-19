@@ -31,7 +31,7 @@ sub execute ($self, $opt, $args) {
     path('cassandane.ini')->spew(@lines);
   }
 
-  system(qw(make -j 12));
+  system(qw(make -j 8));
   Process::Status->assert_ok('Cassandane make');
 
   my @opts = $ENV{CASSANDANEOPTS} ? $ENV{CASSANDANEOPTS} : ();
@@ -40,7 +40,7 @@ sub execute ($self, $opt, $args) {
     qw(
       setpriv --reuid=cyrus --regid=mail
               --clear-groups --inh-caps=-all
-              ./testrunner.pl -f pretty -j 12
+              ./testrunner.pl -f pretty -j 8
     ),
     @opts,
   );
