@@ -25,6 +25,8 @@ sub do_motd {
   $menu =~ s{• \K([^-]+)}{colored(['bright_yellow'], "$1")}ge;
   print $menu;
 
+  # -t *STDOUT -- detect that we have a tty
+  # I have not yet found a reliable test for "is interactive" (-i).
   unless (-t *STDOUT) {
     say "❗️ It looks like you ran this from a non-interactive container.";
     say "❗️ You probably want to use: docker run -ti [image]";
