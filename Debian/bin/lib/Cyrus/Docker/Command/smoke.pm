@@ -7,7 +7,7 @@ use Process::Status;
 
 sub execute ($self, $opt, $args) {
   my @classes = qw(
-    Cyrus::Docker::Command::checkout
+    Cyrus::Docker::Command::clone
     Cyrus::Docker::Command::build
     Cyrus::Docker::Command::test
   );

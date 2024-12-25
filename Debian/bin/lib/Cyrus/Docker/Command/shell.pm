@@ -7,17 +7,24 @@ package Cyrus::Docker::Command::shell;
 use Cyrus::Docker -command;
 use Term::ANSIColor qw(colored);
 
+sub abstract { 'run a shell' }
+
+sub command_names ($self, @rest) {
+  my @names = $self->SUPER::command_names(@rest);
+  return (@names, 'sh');
+}
+
 sub do_motd {
   my $menu = <<~'END';
-            /////  ||||
-          /////    |||| Cyrus IMAP docker image
-        /////      |||| Run cyrus-docker (or "cyd") as:
-      /////        ||||
-    /////          ||||  • cyd checkout - check out cyrus-imapd.git
-    \\\\\          ||||  • cyd build    - build your checked out cyrus-imapd
-      \\\\\        ||||  • cyd test     - run the cyrus-imapd test suite
-        \\\\\      ||||  • cyd smoke    - check out, build and test
-          \\\\\    ||||
+            /////  |||| Cyrus IMAP docker image
+          /////    |||| Run cyrus-docker (or "cyd") as:
+        /////      ||||
+      /////        ||||  • cyd clone  - clone cyrus-imapd.git from GitHub
+    /////          ||||  • cyd build  - build your checked out cyrus-imapd
+    \\\\\          ||||  • cyd test   - run the cyrus-imapd test suite
+      \\\\\        ||||  • cyd smoke  - check out, build and test
+        \\\\\      ||||
+          \\\\\    ||||  • cyd shell  - run a shell in the container
             \\\\\  ||||
   END
 
