@@ -1,0 +1,203 @@
+#!/usr/bin/perl
+use v5.36.0;
+
+package Cyrus::Docker::dar;
+
+use Digest::SHA qw(sha1_hex);
+use Getopt::Long::Descriptive;
+use JSON::PP;
+use Path::Tiny;
+use Process::Status;
+
+my $HELP = <<'END';
+dar is a little program to help you use the Cyrus docker image for testing your
+work in your own checkout of the cyrusimapd repository.
+
+The idea is that it runs a do-nothing container that's ready to build and test
+Cyrus, and then you can tell it to build and test Cyrus at your whim.  It will
+only manage one container per checkout (as identified by absolute path).
+
+The simplest thing to do is to run "dar smoke", which will start a container
+(if needed), then configure, build, and test Cyrus using the "cyd smoke"
+command packed inside the cyrus-docker image.  If you want to pass arguments to
+smoke, you can run "dar smoke -- test1 test2 test3", for example.
+
+You can run other cyd commands through dar.  If you want to get a shell and
+look into what went wrong on your last test run, you can run "dar shell".
+
+dar will start a container just in time to run whatever command you want, and
+will leave it running for more commands.  If you want to clean up the container
+it's got running, run "dar --clean".
+
+If you want to start a container before running any particular commands, you
+can run "dar --start", which is mostly useful to allow you to pass "--image" to
+specify an alternate image to use for the container.
+
+The default image is ghcr.io/cyrusimap/cyrus-docker:nightly but you can set a
+different default for all you uses of "dar" by creating the file
+~/.cyrus-docker/config, which should contain a JSON object.  The only
+meaningful key, for now, is "default_image", which provides an alternate
+default image.
+END
+
+my ($opt, $usage) = describe_options(
+  '%c %o [TO-RUN]',
+  [
+    action => hidden => {
+      default => 'exec',
+      one_of  => [
+        [ help  => 'print an explanation of how to use dar' ],
+        [ start => 'start a container running for future commands' ],
+        [ clean => 'clean up existing container, stopping if needed' ],
+        [ exec  => 'start if none started; docker exec', { hidden => 1 } ],
+      ],
+    }
+  ],
+  [],
+  [ 'keep',     'keep the container after exit' ],
+  [ 'image=s',  'which image to use' ],
+);
+
+my $ABS_CWD = path('.')->absolute;
+
+my $CONFIG  = Cyrus::Docker::dar->load_config();
+
+my $method = __PACKAGE__->can("do_" . $opt->action);
+
+$method || $usage->die;
+
+__PACKAGE__->$method($opt, [@ARGV]);
+
+sub do_help {
+  print $HELP;
+  return;
+}
+
+sub do_start ($class, $opt, $args) {
+  my $existing_container = $class->_existing_container;
+
+  if ($existing_container && $existing_container->{State} ne 'exited') {
+    die "The container $existing_container->{Names} is already running!\n";
+  }
+
+  my $name = $class->container_name_for_cwd;
+  say "Starting container $name to idle, container id:";
+
+  system(
+    'docker', 'run',
+    '--detach',
+    '--name', $name,
+    '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
+    ($opt->keep ? () : '--rm'),
+    $class->_requested_image($opt),
+    qw( cyd idle )
+  );
+
+  my $container = $class->_existing_container;
+
+  unless ($container) {
+    # This is another one of those "should never happen" things…
+    die "The container was started, but now can't be found!\n"
+  }
+
+  # We need the git-version.sh program to work, which means that "git describe"
+  # needs to work in the container's git repo, but it will be running as root,
+  # so git will complain about mismatched ownership unless we mark this
+  # directory safe. -- rjbs, 2024-12-27
+  system(
+    qw( docker exec ), $container->{ID},
+    qw( git config --global --add safe.directory /srv/cyrus-imapd ),
+  );
+
+  Process::Status->assert_ok("Fixing git permissions in container");
+
+  return $class->_existing_container;
+}
+
+sub do_clean ($class, $opt, $args) {
+  @$args && die "You can't supply a command to run with --clean.\n";
+  $opt->image && die "You can't use --image with --clean.\n";
+
+  my $container = $class->_existing_container;
+
+  unless ($container) {
+    say "Nothing to clean up.";
+    return;
+  }
+
+  system(qw( docker container stop ), $container->{ID});
+  Process::Status->assert_ok("Stopping existing container");
+
+  # TODO: We should remove the container when it's stopped, but some containers
+  # will have been started --rm, so they will have self-removed.  I believe
+  # this is in the ->[0]->State->HostConfig->AutoRemove of the "docker
+  # container inspect" output for the container, but just haven't taken the
+  # time to dig. -- rjbs, 2024-12-27
+  say "--clean does not remove any container left behind yet.  You may want to prune.";
+  return;
+}
+
+sub do_exec ($class, $opt, $args) {
+  my $container = $class->_existing_container;
+
+  unless ($container && $container->{State} eq 'running') {
+    $container = $class->do_start($opt, $args);
+  }
+
+  unless ($container) {
+    # I don't think this should ever happen…
+    die "Couldn't get a container to run that in, sorry!\n";
+  }
+
+  if ($container->{State} ne 'running') {
+    # I don't think this should ever happen either...
+    die "Existing container isn't running, you should clean...\n";
+  }
+
+  if ($container->{Command} ne q{"cyd idle"}) {
+    # I don't think this should ever happen either...
+    die "Weird: existing container isn't running cyd idle.  Giving up.\n";
+  }
+
+  # say "Restarting container $existing_name...";
+  # exec(qw( docker start -ai ), $existing_container->{ID});
+  my @to_run = @ARGV ? ('cyd', @ARGV) : ('cyd', 'shell');
+  exec(qw( docker exec -ti ), $container->{ID}, @to_run);
+}
+
+sub _requested_image ($class, $opt) {
+  return $opt->image
+      // $CONFIG->{default_image}
+      // 'ghcr.io/cyrusimap/cyrus-docker:nightly';
+}
+
+sub _get_containers {
+  my %container_named = do {
+    my (@lines) = `docker container list -a --format json`;
+
+    Process::Status->assert_ok("getting container list");
+    chomp @lines;
+
+    # Names?  Plural?  I'm gonna guess that if you do weird things you can get
+    # "name1,name2" but for now I will not worry about it -- rjbs, 2024-12-24
+    map {; $_->{Names} => $_ } map { decode_json($_) } @lines;
+  };
+
+  return \%container_named;
+}
+
+sub _existing_container ($class) {
+  my $containers = $class->_get_containers;
+  return $containers->{ $class->container_name_for_cwd };
+}
+
+sub container_name_for_cwd {
+  my $digest = sha1_hex("$ABS_CWD");
+  return "cyd-" . substr($digest, 0, 12);
+}
+
+sub load_config {
+  my $config_file = path('~/.cyrus-docker')->mkdir->child('config');
+  return {} unless -e $config_file;
+  return decode_json($config_file->slurp);
+}
