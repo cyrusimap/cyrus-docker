@@ -44,6 +44,8 @@ sub execute ($self, $opt, $args) {
 
   system('./tools/build-with-cyruslibs.sh');
   Process::Status->assert_ok("building cyrus-imapd");
+
+  system('/usr/cyrus/bin/cyr_info', 'version');
 }
 
 1;
