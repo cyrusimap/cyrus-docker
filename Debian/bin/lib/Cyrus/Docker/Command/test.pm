@@ -34,15 +34,13 @@ sub execute ($self, $opt, $args) {
   system(qw(make -j 8));
   Process::Status->assert_ok('Cassandane make');
 
-  my @opts = $ENV{CASSANDANEOPTS} ? $ENV{CASSANDANEOPTS} : ();
-
   system(
     qw(
       setpriv --reuid=cyrus --regid=mail
               --clear-groups --inh-caps=-all
               ./testrunner.pl -f pretty -j 8
     ),
-    @opts,
+    @$args,
   );
 
   Process::Status->assert_ok('Cassandane run');
