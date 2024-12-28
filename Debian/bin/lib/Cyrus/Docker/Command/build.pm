@@ -14,6 +14,10 @@ sub execute ($self, $opt, $args) {
 
   chomp $version;
 
+  if ($version eq 'unknown') {
+    die "git-version.sh can't decide what version this is; giving up!\n";
+  }
+
   say "building cyrusversion $version";
 
   $ENV{CFLAGS}="-g -W -Wall -Wextra -Werror";
