@@ -8,6 +8,7 @@ use Process::Status;
 sub execute ($self, $opt, $args) {
   my @classes = qw(
     Cyrus::Docker::Command::clone
+    Cyrus::Docker::Command::clean
     Cyrus::Docker::Command::build
     Cyrus::Docker::Command::test
   );
