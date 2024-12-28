@@ -27,7 +27,7 @@ look into what went wrong on your last test run, you can run "dar shell".
 
 dar will start a container just in time to run whatever command you want, and
 will leave it running for more commands.  If you want to clean up the container
-it's got running, run "dar --clean".
+it's got running, run "dar --prune".
 
 If you want to start a container before running any particular commands, you
 can run "dar --start", which is mostly useful to allow you to pass "--image" to
@@ -48,7 +48,7 @@ my ($opt, $usage) = describe_options(
       one_of  => [
         [ help  => 'print an explanation of how to use dar' ],
         [ start => 'start a container running for future commands' ],
-        [ clean => 'clean up existing container, stopping if needed' ],
+        [ prune => 'remove existing container, stopping if needed' ],
         [ exec  => 'start if none started; docker exec', { hidden => 1 } ],
       ],
     }
@@ -114,9 +114,9 @@ sub do_start ($class, $opt, $args) {
   return $class->_existing_container;
 }
 
-sub do_clean ($class, $opt, $args) {
-  @$args && die "You can't supply a command to run with --clean.\n";
-  $opt->image && die "You can't use --image with --clean.\n";
+sub do_prune ($class, $opt, $args) {
+  @$args && die "You can't supply a command to run with --prune.\n";
+  $opt->image && die "You can't use --image with --prune.\n";
 
   my $container = $class->_existing_container;
 
@@ -133,7 +133,7 @@ sub do_clean ($class, $opt, $args) {
   # this is in the ->[0]->State->HostConfig->AutoRemove of the "docker
   # container inspect" output for the container, but just haven't taken the
   # time to dig. -- rjbs, 2024-12-27
-  say "--clean does not remove any container left behind yet.  You may want to prune.";
+  say "--prune does not remove any container left behind yet.  You may want to prune.";
   return;
 }
 
@@ -151,7 +151,7 @@ sub do_exec ($class, $opt, $args) {
 
   if ($container->{State} ne 'running') {
     # I don't think this should ever happen either...
-    die "Existing container isn't running, you should clean...\n";
+    die "Existing container isn't running, you should prune...\n";
   }
 
   if ($container->{Command} ne q{"cyd idle"}) {
