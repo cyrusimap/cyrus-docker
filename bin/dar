@@ -5,6 +5,30 @@ package Cyrus::Docker::dar;
 
 use utf8;
 
+BEGIN {
+  my @missing;
+  for my $prereq (qw(
+    Digest::SHA
+    Getopt::Long::Descriptive
+    IPC::Run
+    JSON::PP
+    Path::Tiny
+    Process::Status
+  )) {
+    my $ok = eval "require $prereq; 1";
+    push @missing, $prereq unless $ok;
+  }
+
+  if (@missing) {
+    my $error = join qq{\n}, (
+      "You're missing some required modules, please install them:",
+      map {; "  $_" } @missing,
+    );
+
+    die "$error\n";
+  }
+}
+
 use Digest::SHA qw(sha1_hex);
 use Getopt::Long::Descriptive;
 use IPC::Run qw(run);
