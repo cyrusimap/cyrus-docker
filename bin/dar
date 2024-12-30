@@ -5,6 +5,7 @@ package Cyrus::Docker::dar;
 
 use Digest::SHA qw(sha1_hex);
 use Getopt::Long::Descriptive;
+use IPC::Run qw(run);
 use JSON::PP;
 use Path::Tiny;
 use Process::Status;
@@ -68,6 +69,11 @@ $method || $usage->die;
 
 __PACKAGE__->$method($opt, [@ARGV]);
 
+my sub emptyref {
+  my $str = q{};
+  return \$str;
+}
+
 sub do_help {
   print $HELP;
   return;
@@ -81,17 +87,23 @@ sub do_start ($class, $opt, $args) {
   }
 
   my $name = $class->container_name_for_cwd;
-  say "Starting container $name to idle, container id:";
+  say "Starting container $name to idle.";
 
-  system(
-    'docker', 'run',
-    '--detach',
-    '--name', $name,
-    '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
-    ($opt->keep ? () : '--rm'),
-    $class->_requested_image($opt),
-    qw( cyd idle )
+  run(
+    [
+      'docker', 'run',
+      '--detach',
+      '--name', $name,
+      '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
+      ($opt->keep ? () : '--rm'),
+      $class->_requested_image($opt),
+      qw( cyd idle )
+    ],
+    emptyref(),
+    \my $container_id,
   );
+
+  Process::Status->assert_ok("Starting idle container");
 
   my $container = $class->_existing_container;
 
@@ -104,10 +116,10 @@ sub do_start ($class, $opt, $args) {
   # needs to work in the container's git repo, but it will be running as root,
   # so git will complain about mismatched ownership unless we mark this
   # directory safe. -- rjbs, 2024-12-27
-  system(
+  run([
     qw( docker exec ), $container->{ID},
     qw( git config --global --add safe.directory /srv/cyrus-imapd ),
-  );
+  ]);
 
   Process::Status->assert_ok("Fixing git permissions in container");
 
@@ -125,19 +137,27 @@ sub do_prune ($class, $opt, $args) {
     return;
   }
 
-  # I do not like to interpolate the ID here, but readpipe (qx...) does not
-  # take a LIST. -- rjbs, 2024-12-29
-  my $inspect_json = `docker inspect $container->{ID}`;
+  run(
+    [ qw( docker inspect ), $container->{ID} ],
+    emptyref(),
+    \my $inspect_json,
+  );
+
   Process::Status->assert_ok("Inspecting stopped container");
 
   my $inspect = decode_json($inspect_json);
   my $autoremove = $inspect->[0]{HostConfig}{AutoRemove};
 
-  system(qw( docker container stop ), $container->{ID});
+  run(
+    [ qw( docker container stop ), $container->{ID} ],
+    emptyref(),
+    emptyref(),
+  );
+
   Process::Status->assert_ok("Stopping existing container");
 
   unless ($autoremove) {
-    system(qw( docker container rm ), $container->{ID});
+    run([ qw( docker container rm ), $container->{ID} ]);
     Process::Status->assert_ok("Removing stopped container");
   }
 }
