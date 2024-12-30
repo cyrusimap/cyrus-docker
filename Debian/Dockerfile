@@ -13,11 +13,8 @@ ENV CPANM="cpanm${CPANM_OPT:+ $CPANM_OPT}"
 # Set it to "false" to leave all the checkouts and build artifacts in place.
 ARG CLEANUP=true
 
-# This determines what branch (head or tag) we use to build cyruslibs.  We
-# would like to be tracking master, but as of this writing (2024-12-09) we need
-# to fix a conflict between cyrus-imapd and cyruslibs master branches.
-# -- rjbs, 2024-12-09
-ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v58
+# This determines what branch (head or tag) we use to build cyruslibs.
+ARG CYRUSLIBS_BRANCH=master
 
 # This determines what commit (sha1) we use to build Dovecot.  We don't have
 # much of a policy about testing or changing this, but: before making changes
@@ -55,6 +52,7 @@ apt-get -y install --no-install-recommends \
     libanyevent-perl \
     libbsd-dev \
     libbsd-resource-perl \
+    libcld2-dev \
     libclone-perl \
     libconfig-inifiles-perl \
     libcunit1-dev \
@@ -69,6 +67,7 @@ apt-get -y install --no-install-recommends \
     libio-async-perl \
     libio-socket-inet6-perl \
     libio-stringy-perl \
+    libjansson-dev \
     libjson-perl \
     libjson-xs-perl \
     libldap2-dev \
@@ -98,6 +97,7 @@ apt-get -y install --no-install-recommends \
     libxml-xpath-perl \
     libxml2-dev \
     libwrap0-dev \
+    libwslay-dev \
     libwww-perl \
     libxapian-dev \
     libzephyr-dev \
