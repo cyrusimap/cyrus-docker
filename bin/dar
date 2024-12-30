@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 use v5.36.0;
 
 package Cyrus::Docker::dar;
