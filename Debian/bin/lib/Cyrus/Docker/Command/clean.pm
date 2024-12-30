@@ -5,6 +5,8 @@ use Cyrus::Docker -command;
 
 use Process::Status;
 
+sub abstract { 'clean all build artifacts in the cyrus-imapd source tree' }
+
 sub execute ($self, $opt, $args) {
   my $root = "/srv/cyrus-imapd";
   chdir $root or die "can't chdir to $root: $!";

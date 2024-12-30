@@ -6,6 +6,8 @@ use Cyrus::Docker -command;
 use Path::Tiny;
 use Process::Status;
 
+sub abstract { 'clone the cyrus-imapd source tree to /srv, if not present' }
+
 sub execute ($self, $opt, $arg) {
   my $root = '/srv';
   my $repo = 'https://github.com/cyrusimap/cyrus-imapd.git';

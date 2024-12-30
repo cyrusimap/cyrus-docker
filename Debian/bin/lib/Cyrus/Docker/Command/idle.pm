@@ -6,6 +6,8 @@ use Cyrus::Docker -command;
 use Process::Status;
 use Term::ANSIColor qw(colored);
 
+sub abstract { 'sleep forever, to keep a container running' }
+
 sub execute ($self, $opt, $args) {
   my $motd = <<~'END';
             /////  |||| Cyrus IMAP docker image
