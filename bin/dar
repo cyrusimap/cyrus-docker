@@ -64,7 +64,7 @@ can run "dar --start", which is mostly useful to allow you to pass "--image" to
 specify an alternate image to use for the container.
 
 The default image is ghcr.io/cyrusimap/cyrus-docker:nightly but you can set a
-different default for all you uses of "dar" by creating the file
+different default for all your uses of "dar" by creating the file
 ~/.cyrus-docker/config, which should contain a JSON object.  The only
 meaningful key, for now, is "default_image", which provides an alternate
 default image.
