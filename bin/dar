@@ -3,12 +3,17 @@ use v5.36.0;
 
 package Cyrus::Docker::dar;
 
+use utf8;
+
 use Digest::SHA qw(sha1_hex);
 use Getopt::Long::Descriptive;
 use IPC::Run qw(run);
 use JSON::PP;
 use Path::Tiny;
 use Process::Status;
+
+binmode *STDOUT, ':encoding(utf-8)';
+binmode *STDIN,  ':encoding(utf-8)';
 
 my $HELP = <<'END';
 dar is a little program to help you use the Cyrus docker image for testing your
@@ -87,7 +92,7 @@ sub do_start ($class, $opt, $args) {
   }
 
   my $name = $class->container_name_for_cwd;
-  say "Starting container $name to idle.";
+  say "⏳ Starting container $name to idle.";
 
   run(
     [
@@ -103,13 +108,16 @@ sub do_start ($class, $opt, $args) {
     \my $container_id,
   );
 
-  Process::Status->assert_ok("Starting idle container");
+  chomp $container_id;
+  say "✅ Container started, id: $container_id";
+
+  Process::Status->assert_ok("❌ Starting idle container");
 
   my $container = $class->_existing_container;
 
   unless ($container) {
     # This is another one of those "should never happen" things…
-    die "The container was started, but now can't be found!\n"
+    die "❌ The container was started, but now can't be found!\n"
   }
 
   # We need the git-version.sh program to work, which means that "git describe"
@@ -121,19 +129,19 @@ sub do_start ($class, $opt, $args) {
     qw( git config --global --add safe.directory /srv/cyrus-imapd ),
   ]);
 
-  Process::Status->assert_ok("Fixing git permissions in container");
+  Process::Status->assert_ok("❌ Fixing git permissions in container");
 
   return $class->_existing_container;
 }
 
 sub do_prune ($class, $opt, $args) {
-  @$args && die "You can't supply a command to run with --prune.\n";
-  $opt->image && die "You can't use --image with --prune.\n";
+  @$args && die "❌ You can't supply a command to run with --prune.\n";
+  $opt->image && die "❌ You can't use --image with --prune.\n";
 
   my $container = $class->_existing_container;
 
   unless ($container) {
-    say "Nothing to clean up.";
+    say "✅ Nothing to clean up.";
     return;
   }
 
@@ -143,7 +151,7 @@ sub do_prune ($class, $opt, $args) {
     \my $inspect_json,
   );
 
-  Process::Status->assert_ok("Inspecting stopped container");
+  Process::Status->assert_ok("❌ Inspecting stopped container");
 
   my $inspect = decode_json($inspect_json);
   my $autoremove = $inspect->[0]{HostConfig}{AutoRemove};
@@ -154,11 +162,13 @@ sub do_prune ($class, $opt, $args) {
     emptyref(),
   );
 
-  Process::Status->assert_ok("Stopping existing container");
+  Process::Status->assert_ok("❌ Stopping existing container");
+
+  say "✅ Container stopped.";
 
   unless ($autoremove) {
     run([ qw( docker container rm ), $container->{ID} ]);
-    Process::Status->assert_ok("Removing stopped container");
+    Process::Status->assert_ok("❌ Removing stopped container");
   }
 }
 
@@ -171,21 +181,20 @@ sub do_exec ($class, $opt, $args) {
 
   unless ($container) {
     # I don't think this should ever happen…
-    die "Couldn't get a container to run that in, sorry!\n";
+    die "❌ Couldn't get a container to run that in, sorry!\n";
   }
 
   if ($container->{State} ne 'running') {
     # I don't think this should ever happen either...
-    die "Existing container isn't running, you should prune...\n";
+    die "❌ Existing container isn't running, you should prune...\n";
   }
 
   if ($container->{Command} ne q{"cyd idle"}) {
     # I don't think this should ever happen either...
-    die "Weird: existing container isn't running cyd idle.  Giving up.\n";
+    die "❌ Weird: existing container isn't running cyd idle.  Giving up.\n";
   }
 
-  # say "Restarting container $existing_name...";
-  # exec(qw( docker start -ai ), $existing_container->{ID});
+  say "⏳ Executing command in container $container->{ID}...";
   my @to_run = @ARGV ? ('cyd', @ARGV) : ('cyd', 'shell');
   exec(qw( docker exec -ti ), $container->{ID}, @to_run);
 }
@@ -200,7 +209,7 @@ sub _get_containers {
   my %container_named = do {
     my (@lines) = `docker container list -a --format json`;
 
-    Process::Status->assert_ok("getting container list");
+    Process::Status->assert_ok("❌ Getting container list");
     chomp @lines;
 
     # Names?  Plural?  I'm gonna guess that if you do weird things you can get
