@@ -219,7 +219,7 @@ sub do_exec ($class, $opt, $args) {
   }
 
   say "⏳ Executing command in container $container->{ID}...";
-  my @to_run = @ARGV ? ('cyd', @ARGV) : ('cyd', 'shell');
+  my @to_run = @$args ? ('cyd', @$args) : ('cyd', 'shell');
   exec(qw( docker exec -ti ), $container->{ID}, @to_run);
 }
 
