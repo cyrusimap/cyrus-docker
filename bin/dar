@@ -125,16 +125,21 @@ sub do_prune ($class, $opt, $args) {
     return;
   }
 
+  # I do not like to interpolate the ID here, but readpipe (qx...) does not
+  # take a LIST. -- rjbs, 2024-12-29
+  my $inspect_json = `docker inspect $container->{ID}`;
+  Process::Status->assert_ok("Inspecting stopped container");
+
+  my $inspect = decode_json($inspect_json);
+  my $autoremove = $inspect->[0]{HostConfig}{AutoRemove};
+
   system(qw( docker container stop ), $container->{ID});
   Process::Status->assert_ok("Stopping existing container");
 
-  # TODO: We should remove the container when it's stopped, but some containers
-  # will have been started --rm, so they will have self-removed.  I believe
-  # this is in the ->[0]->State->HostConfig->AutoRemove of the "docker
-  # container inspect" output for the container, but just haven't taken the
-  # time to dig. -- rjbs, 2024-12-27
-  say "--prune does not remove any container left behind yet.  You may want to prune.";
-  return;
+  unless ($autoremove) {
+    system(qw( docker container rm ), $container->{ID});
+    Process::Status->assert_ok("Removing stopped container");
+  }
 }
 
 sub do_exec ($class, $opt, $args) {
