@@ -220,7 +220,11 @@ sub do_exec ($class, $opt, $args) {
 
   say "⏳ Executing command in container $container->{ID}...";
   my @to_run = @$args ? ('cyd', @$args) : ('cyd', 'shell');
-  exec(qw( docker exec -ti ), $container->{ID}, @to_run);
+  exec(
+    qw( docker exec --workdir /srv/cyrus-imapd -ti ),
+    $container->{ID},
+    @to_run,
+  );
 }
 
 sub _requested_image ($class, $opt) {
