@@ -54,7 +54,7 @@ smoke, you can run "dar smoke -- test1 test2 test3", for example.
 
 You can run other cyd commands through dar.  If you want to get a shell and
 look into what went wrong on your last test run, you can run "dar shell".  If
-you want to run something other than a cyd command, use "dar run XYZ ABC" to
+you want to run something other than a cyd command, use "dar run -- XYZ ABC" to
 run XYZ ABC directly in the container.
 
 dar will start a container just in time to run whatever command you want, and
@@ -230,7 +230,7 @@ sub do_exec ($class, $opt, $args) {
 
   say "⏳ Executing command in container $container->{ID}...";
 
-  my @to_run = @$args && $args->[0] eq 'run'  ? @$args
+  my @to_run = @$args && $args->[0] eq 'run'  ? ($args->@[1..$#$args])
              : @$args                         ? ('cyd', @$args)
              :                                  ('cyd', 'shell');
 
