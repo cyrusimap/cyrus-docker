@@ -88,7 +88,15 @@ my ($opt, $usage) = describe_options(
   [],
   [ 'keep',     'keep the container after exit' ],
   [ 'image=s',  'which image to use' ],
+  [ 'run-outside-clone', 'run even if cwd is not a cyrus-imapd clone' ],
 );
+
+unless (-e 'imap/imapd.c' || $opt->run_outside_clone) {
+  die <<~'END';
+  The current directory doesn't appear to be a cyrus-imapd clone.  To run dar
+  anyway, pass the --run-outside-clone switch.
+  END
+}
 
 my $ABS_CWD = path('.')->absolute;
 
