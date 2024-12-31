@@ -151,7 +151,6 @@ apt-get -y install --no-install-recommends \
     libthrowable-perl \
     libwww-perl \
     `# BEGIN for cyrus-docker or just quality of life` \
-    libapp-cmd-perl \
     less \
     tini
 EOF
@@ -179,12 +178,14 @@ EOF
 RUN <<EOF
 # install Perl prerequisites from CPAN
 set -e
-$CPANM Mail::IMAPTalk \
-       Net::CalDAVTalk \
-       Net::CardDAVTalk \
-       Convert::Base64 \
-       IO::File::fcntl \
-       Process::Status \
+$CPANM \
+  App::Cmd \
+  Convert::Base64 \
+  IO::File::fcntl \
+  Mail::IMAPTalk \
+  Net::CalDAVTalk \
+  Net::CardDAVTalk \
+  Process::Status \
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
 

@@ -1,0 +1,279 @@
+#!/usr/bin/env perl
+use v5.36.0;
+
+package Cyrus::Docker::dar;
+
+use utf8;
+
+BEGIN {
+  my @missing;
+  for my $prereq (qw(
+    Digest::SHA
+    Getopt::Long::Descriptive
+    IPC::Run
+    JSON::PP
+    Path::Tiny
+    Process::Status
+  )) {
+    my $ok = eval "require $prereq; 1";
+    push @missing, $prereq unless $ok;
+  }
+
+  if (@missing) {
+    my $error = join qq{\n}, (
+      "You're missing some required modules, please install them:",
+      map {; "  $_" } @missing,
+    );
+
+    die "$error\n";
+  }
+}
+
+use Digest::SHA qw(sha1_hex);
+use Getopt::Long::Descriptive;
+use IPC::Run qw(run);
+use JSON::PP;
+use Path::Tiny;
+use Process::Status;
+
+binmode *STDOUT, ':encoding(utf-8)';
+binmode *STDIN,  ':encoding(utf-8)';
+
+my $HELP = <<'END';
+dar is a little program to help you use the Cyrus docker image for testing your
+work in your own checkout of the cyrusimapd repository.
+
+The idea is that it runs a do-nothing container that's ready to build and test
+Cyrus, and then you can tell it to build and test Cyrus at your whim.  It will
+only manage one container per checkout (as identified by absolute path).
+
+The simplest thing to do is to run "dar smoke", which will start a container
+(if needed), then configure, build, and test Cyrus using the "cyd smoke"
+command packed inside the cyrus-docker image.  If you want to pass arguments to
+smoke, you can run "dar smoke -- test1 test2 test3", for example.
+
+You can run other cyd commands through dar.  If you want to get a shell and
+look into what went wrong on your last test run, you can run "dar shell".  If
+you want to run something other than a cyd command, use "dar run -- XYZ ABC" to
+run XYZ ABC directly in the container.
+
+dar will start a container just in time to run whatever command you want, and
+will leave it running for more commands.  If you want to clean up the container
+it's got running, run "dar --prune".
+
+If you want to start a container before running any particular commands, you
+can run "dar --start", which is mostly useful to allow you to pass "--image" to
+specify an alternate image to use for the container.
+
+The default image is ghcr.io/cyrusimap/cyrus-docker:nightly but you can set a
+different default for all your uses of "dar" by creating the file
+~/.cyrus-docker/config, which should contain a JSON object.  The only
+meaningful key, for now, is "default_image", which provides an alternate
+default image.
+END
+
+my ($opt, $usage) = describe_options(
+  '%c %o [TO-RUN]',
+  [
+    action => hidden => {
+      default => 'exec',
+      one_of  => [
+        [ help  => 'print an explanation of how to use dar' ],
+        [ start => 'start a container running for future commands' ],
+        [ prune => 'remove existing container, stopping if needed' ],
+        [ exec  => 'start if none started; docker exec', { hidden => 1 } ],
+      ],
+    }
+  ],
+  [],
+  [ 'keep',     'keep the container after exit' ],
+  [ 'image=s',  'which image to use' ],
+  [ 'run-outside-clone', 'run even if cwd is not a cyrus-imapd clone' ],
+);
+
+unless (-e 'imap/imapd.c' || $opt->run_outside_clone) {
+  die <<~'END';
+  The current directory doesn't appear to be a cyrus-imapd clone.  To run dar
+  anyway, pass the --run-outside-clone switch.
+  END
+}
+
+my $ABS_CWD = path('.')->absolute;
+
+my $CONFIG  = Cyrus::Docker::dar->load_config();
+
+my $method = __PACKAGE__->can("do_" . $opt->action);
+
+$method || $usage->die;
+
+__PACKAGE__->$method($opt, [@ARGV]);
+
+my sub emptyref {
+  my $str = q{};
+  return \$str;
+}
+
+sub do_help {
+  print $HELP;
+  return;
+}
+
+sub do_start ($class, $opt, $args) {
+  my $existing_container = $class->_existing_container;
+
+  if ($existing_container && $existing_container->{State} ne 'exited') {
+    die "The container $existing_container->{Names} is already running!\n";
+  }
+
+  my $name = $class->container_name_for_cwd;
+  say "⏳ Starting container $name to idle.";
+
+  run(
+    [
+      'docker', 'run',
+      '--detach',
+      '--name', $name,
+      '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
+      ($opt->keep ? () : '--rm'),
+      $class->_requested_image($opt),
+      qw( cyd idle )
+    ],
+    emptyref(),
+    \my $container_id,
+  );
+
+  chomp $container_id;
+  say "✅ Container started, id: $container_id";
+
+  Process::Status->assert_ok("❌ Starting idle container");
+
+  my $container = $class->_existing_container;
+
+  unless ($container) {
+    # This is another one of those "should never happen" things…
+    die "❌ The container was started, but now can't be found!\n"
+  }
+
+  # We need the git-version.sh program to work, which means that "git describe"
+  # needs to work in the container's git repo, but it will be running as root,
+  # so git will complain about mismatched ownership unless we mark this
+  # directory safe. -- rjbs, 2024-12-27
+  run([
+    qw( docker exec ), $container->{ID},
+    qw( git config --global --add safe.directory /srv/cyrus-imapd ),
+  ]);
+
+  Process::Status->assert_ok("❌ Fixing git permissions in container");
+
+  return $class->_existing_container;
+}
+
+sub do_prune ($class, $opt, $args) {
+  @$args && die "❌ You can't supply a command to run with --prune.\n";
+  $opt->image && die "❌ You can't use --image with --prune.\n";
+
+  my $container = $class->_existing_container;
+
+  unless ($container) {
+    say "✅ Nothing to clean up.";
+    return;
+  }
+
+  run(
+    [ qw( docker inspect ), $container->{ID} ],
+    emptyref(),
+    \my $inspect_json,
+  );
+
+  Process::Status->assert_ok("❌ Inspecting stopped container");
+
+  my $inspect = decode_json($inspect_json);
+  my $autoremove = $inspect->[0]{HostConfig}{AutoRemove};
+
+  run(
+    [ qw( docker container stop ), $container->{ID} ],
+    emptyref(),
+    emptyref(),
+  );
+
+  Process::Status->assert_ok("❌ Stopping existing container");
+
+  say "✅ Container stopped.";
+
+  unless ($autoremove) {
+    run([ qw( docker container rm ), $container->{ID} ]);
+    Process::Status->assert_ok("❌ Removing stopped container");
+  }
+}
+
+sub do_exec ($class, $opt, $args) {
+  my $container = $class->_existing_container;
+
+  unless ($container && $container->{State} eq 'running') {
+    $container = $class->do_start($opt, $args);
+  }
+
+  unless ($container) {
+    # I don't think this should ever happen…
+    die "❌ Couldn't get a container to run that in, sorry!\n";
+  }
+
+  if ($container->{State} ne 'running') {
+    # I don't think this should ever happen either...
+    die "❌ Existing container isn't running, you should prune...\n";
+  }
+
+  if ($container->{Command} ne q{"cyd idle"}) {
+    # I don't think this should ever happen either...
+    die "❌ Weird: existing container isn't running cyd idle.  Giving up.\n";
+  }
+
+  say "⏳ Executing command in container $container->{ID}...";
+
+  my @to_run = @$args && $args->[0] eq 'run'  ? ($args->@[1..$#$args])
+             : @$args                         ? ('cyd', @$args)
+             :                                  ('cyd', 'shell');
+
+  exec(
+    qw( docker exec --workdir /srv/cyrus-imapd -ti ),
+    $container->{ID},
+    @to_run,
+  );
+}
+
+sub _requested_image ($class, $opt) {
+  return $opt->image
+      // $CONFIG->{default_image}
+      // 'ghcr.io/cyrusimap/cyrus-docker:nightly';
+}
+
+sub _get_containers {
+  my %container_named = do {
+    my (@lines) = `docker container list -a --format json`;
+
+    Process::Status->assert_ok("❌ Getting container list");
+    chomp @lines;
+
+    # Names?  Plural?  I'm gonna guess that if you do weird things you can get
+    # "name1,name2" but for now I will not worry about it -- rjbs, 2024-12-24
+    map {; $_->{Names} => $_ } map { decode_json($_) } @lines;
+  };
+
+  return \%container_named;
+}
+
+sub _existing_container ($class) {
+  my $containers = $class->_get_containers;
+  return $containers->{ $class->container_name_for_cwd };
+}
+
+sub container_name_for_cwd {
+  my $digest = sha1_hex("$ABS_CWD");
+  return "cyd-" . substr($digest, 0, 12);
+}
+
+sub load_config {
+  my $config_file = path('~/.cyrus-docker')->mkdir->child('config');
+  return {} unless -e $config_file;
+  return decode_json($config_file->slurp);
+}

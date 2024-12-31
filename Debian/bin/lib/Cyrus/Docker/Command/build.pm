@@ -5,6 +5,8 @@ use Cyrus::Docker -command;
 
 use Process::Status;
 
+sub abstract { 'configure, build, and install cyrus-imapd' }
+
 sub execute ($self, $opt, $args) {
   my $root = "/srv/cyrus-imapd";
   chdir $root or die "can't chdir to $root: $!";
@@ -13,6 +15,10 @@ sub execute ($self, $opt, $args) {
   Process::Status->assert_ok("determining git version");
 
   chomp $version;
+
+  if ($version eq 'unknown') {
+    die "git-version.sh can't decide what version this is; giving up!\n";
+  }
 
   say "building cyrusversion $version";
 
@@ -40,6 +46,8 @@ sub execute ($self, $opt, $args) {
 
   system('./tools/build-with-cyruslibs.sh');
   Process::Status->assert_ok("building cyrus-imapd");
+
+  system('/usr/cyrus/bin/cyr_info', 'version');
 }
 
 1;
