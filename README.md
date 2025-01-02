@@ -1,13 +1,15 @@
 # Docker Images for Cyrus IMAP
 
-These Docker images contain all the required libraries for setting up and
-running an instance of Cyrus IMAP.
+This repo contains a Dockerfile for building a container that has all the
+required libraries for building and testing Cyrus IMAP.  It is meant for use in
+Cyrus IMAP's automated test runs, and for testing changes while developing
+Cyrus.
 
-There are 2 ways to acquire the Docker images.
+There are two ways to acquire the Docker images.
 
 ## Build locally from a Dockerfile
 
-Debian is the preferred platform for CyrusIMAP, so these instructions will be
+Debian is the preferred platform for Cyrus IMAP, so these instructions will be
 specific to Debian distributions.  While we'd like to support multiple
 platforms in the future, we do not currently do so.
 
@@ -31,10 +33,10 @@ $ docker build -t cyrus-bookworm .
 
 ..and let Docker do its thing.
 
-## Fetch latest images from hub.docker.com
+## Fetch latest images from the GitHub Container Repository
 
 ```
-$ docker pull cyrusimapdocker/cyrus-bookworm
+$ docker pull ghcr.io/cyrusimap/cyrus-docker:nightly
 ```
 
 
@@ -42,13 +44,13 @@ $ docker pull cyrusimapdocker/cyrus-bookworm
 
 To run the built container:
 
+```
+$ docker run -it ghcr.io/cyrusimap/cyrus-docker:nightly
+```
 
-```
-$ docker run -it --sysctl net.ipv6.conf.all.disable_ipv6=0 cyrus-bookworm
-```
+(Or provide whatever name you use when building the image yourself.)
 
-If the image has been fetched from hub.docker.com, run it like so:
-
-```
-$ docker run -it --sysctl net.ipv6.conf.all.disable_ipv6=0 cyrusimapdocker/cyrus-bookworm
-```
+You'll be dropped into an interactive shell with some help about how to go
+about cloning and testing Cyrus IMAP.  You can also look at the included `dar`
+tool (`./bin/dar)) for how to use this container while working on your
+own branch of Cyrus IMAP.
