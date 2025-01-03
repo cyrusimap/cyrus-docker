@@ -151,6 +151,7 @@ apt-get -y install --no-install-recommends \
     libthrowable-perl \
     libwww-perl \
     `# BEGIN for building docs` \
+    libpod-pom-view-restructured-perl \
     python3-git \
     python3-sphinx \
     python3-sphinx-rtd-theme \
