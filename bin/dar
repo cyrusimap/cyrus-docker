@@ -36,8 +36,10 @@ use JSON::PP;
 use Path::Tiny;
 use Process::Status;
 
+my $MINIMUM_IMAGE_VERSION = 1;
+
 binmode *STDOUT, ':encoding(utf-8)';
-binmode *STDIN,  ':encoding(utf-8)';
+binmode *STDERR, ':encoding(utf-8)';
 
 my $HELP = <<'END';
 dar is a little program to help you use the Cyrus docker image for testing your
@@ -122,11 +124,24 @@ sub do_start ($class, $opt, $args) {
   my $existing_container = $class->_existing_container;
 
   if ($existing_container && $existing_container->{State} ne 'exited') {
-    die "The container $existing_container->{Names} is already running!\n";
+    die "❌ The container $existing_container->{Names} is already running!\n";
   }
 
   my $name = $class->container_name_for_cwd;
   say "⏳ Starting container $name to idle.";
+
+  my $image_specifier = $class->_requested_image($opt);
+  my $image = $class->_get_image($image_specifier);
+
+  my $image_version = $image->{Config}{Labels}{'org.cyrusimap.cyrus-docker.version'};
+
+  unless ($image_version && $image_version >= $MINIMUM_IMAGE_VERSION) {
+    # In the future, when we actually *use* this facility for something, we may
+    # want to be more specific, like "you need v3 minimum" or "the following
+    # commands will not work without v3" or whatever.  For now, "just update"
+    # seems solid.
+    die "❌ This container is too old for this version of dar.\n";
+  }
 
   run(
     [
@@ -135,17 +150,17 @@ sub do_start ($class, $opt, $args) {
       '--name', $name,
       '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
       ($opt->keep ? () : '--rm'),
-      $class->_requested_image($opt),
+      $image_specifier,
       qw( cyd idle )
     ],
     emptyref(),
     \my $container_id,
   );
 
+  Process::Status->assert_ok("❌ Starting idle container");
+
   chomp $container_id;
   say "✅ Container started, id: $container_id";
-
-  Process::Status->assert_ok("❌ Starting idle container");
 
   my $container = $class->_existing_container;
 
@@ -249,6 +264,24 @@ sub _requested_image ($class, $opt) {
   return $opt->image
       // $CONFIG->{default_image}
       // 'ghcr.io/cyrusimap/cyrus-docker:nightly';
+}
+
+sub _get_image ($class, $image_specifier) {
+  run(
+    [ 'docker', 'image', 'inspect', $image_specifier ],
+    emptyref(),
+    \my $json,
+  );
+
+  Process::Status->assert_ok("❌ Inspecting image");
+
+  my $data = decode_json($json);
+
+  if (@$data > 1) {
+    die "❌ More than one image description came back from docker image inspect?!\n";
+  }
+
+  return $data->[0];
 }
 
 sub _get_containers {

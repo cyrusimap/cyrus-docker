@@ -4,6 +4,8 @@ ARG DEBIAN_VERSION=bookworm
 FROM debian:$DEBIAN_VERSION
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
+LABEL org.cyrusimap.cyrus-docker.version="1.0"
+
 # If you want all the cpanm-based installs to run tests, pass:
 #   --build-arg CPANM_TEST=1
 ARG CPANM_TEST
