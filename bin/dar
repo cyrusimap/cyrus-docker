@@ -209,6 +209,10 @@ sub do_prune ($class, $opt, $args) {
 sub do_exec ($class, $opt, $args) {
   my $container = $class->_existing_container;
 
+  if ($container && $opt->image && $container->{Image} ne $opt->image) {
+    die "❌ You've already got a running container, but for a different image.\n";
+  }
+
   unless ($container && $container->{State} eq 'running') {
     $container = $class->do_start($opt, $args);
   }
