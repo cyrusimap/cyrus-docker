@@ -36,6 +36,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          labels: |
+            org.cyrusimap.cyrus-docker.built-from=${{ github.sha }}
           tags: |
             type=schedule
             type=ref,event=branch
