@@ -4,6 +4,8 @@ ARG DEBIAN_VERSION=bookworm
 FROM debian:$DEBIAN_VERSION
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
+LABEL org.cyrusimap.cyrus-docker.version="1.0"
+
 RUN <<EOF
 # install prerequisites via apt-get
 set -e
