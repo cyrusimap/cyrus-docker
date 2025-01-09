@@ -4,23 +4,6 @@ ARG DEBIAN_VERSION=bookworm
 FROM debian:$DEBIAN_VERSION
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 
-# If you want all the cpanm-based installs to run tests, pass:
-#   --build-arg CPANM_TEST=1
-ARG CPANM_TEST
-ENV CPANM_OPT=${CPANM_TEST:--n}
-ENV CPANM="cpanm${CPANM_OPT:+ $CPANM_OPT}"
-
-# Set it to "false" to leave all the checkouts and build artifacts in place.
-ARG CLEANUP=true
-
-# This determines what branch (head or tag) we use to build cyruslibs.
-ARG CYRUSLIBS_BRANCH=master
-
-# This determines what commit (sha1) we use to build Dovecot.  We don't have
-# much of a policy about testing or changing this, but: before making changes
-# to the Dockerfile or the built image, make sure they don't break things!
-ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
-
 RUN <<EOF
 # install prerequisites via apt-get
 set -e
@@ -181,6 +164,15 @@ RUN <<EOF
 git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git
 EOF
 
+# If you want all the cpanm-based installs to run tests, pass:
+#   --build-arg CPANM_TEST=1
+ARG CPANM_TEST
+ENV CPANM_OPT=${CPANM_TEST:--n}
+ENV CPANM="cpanm${CPANM_OPT:+ $CPANM_OPT}"
+
+# Set it to "false" to leave all the checkouts and build artifacts in place.
+ARG CLEANUP=true
+
 RUN <<EOF
 # install Perl prerequisites from CPAN
 set -e
@@ -217,6 +209,11 @@ cd ..
 $CLEANUP && rm -rf Mail-IMAPTalk || true
 EOF
 
+# This determines what commit (sha1) we use to build Dovecot.  We don't have
+# much of a policy about testing or changing this, but: before making changes
+# to the Dockerfile or the built image, make sure they don't break things!
+ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
+
 RUN <<EOF
 # clone and build dovecot.git
 # This one is weird.  We want a specific commit, just for the sake of pinning
@@ -251,6 +248,9 @@ make -j 8
 # need to run it once as root to link up libs
 ./src/imaptest || true
 EOF
+
+# This determines what branch (head or tag) we use to build cyruslibs.
+ARG CYRUSLIBS_BRANCH=master
 
 RUN <<EOF
 # clone and build cyruslibs
