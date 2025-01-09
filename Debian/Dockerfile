@@ -87,8 +87,6 @@ apt-get -y install --no-install-recommends \
     lsb-base \
     net-tools \
     perl \
-    php-cli \
-    php-curl \
     pkg-config \
     po-debconf \
     python3-docutils \
