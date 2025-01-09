@@ -5,7 +5,7 @@ use Cyrus::Docker -command;
 
 use Process::Status;
 
-sub abstract { 'build and test the contents of /srv/cyrus-imapd' }
+sub abstract { 'build and test the contents of cyrus-imapd repo' }
 
 sub execute ($self, $opt, $args) {
   my @classes = qw(

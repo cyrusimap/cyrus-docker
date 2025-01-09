@@ -8,7 +8,7 @@ use Process::Status;
 sub abstract { 'configure, build, and install cyrus-imapd' }
 
 sub execute ($self, $opt, $args) {
-  my $root = "/srv/cyrus-imapd";
+  my $root = $self->app->repo_root;
   chdir $root or die "can't chdir to $root: $!";
 
   my $version = `./tools/git-version.sh`;

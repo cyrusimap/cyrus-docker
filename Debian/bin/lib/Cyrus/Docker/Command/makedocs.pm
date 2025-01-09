@@ -8,7 +8,7 @@ use Process::Status;
 sub abstract { 'make the docs site using Sphinx' }
 
 sub execute ($self, $opt, $args) {
-  my $root = "/srv/cyrus-imapd/docsrc";
+  my $root = $self->app->repo_root->child('docsrc');
   chdir $root or die "can't chdir to $root: $!";
 
   system('make', 'html');
