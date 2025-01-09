@@ -8,7 +8,7 @@ use Process::Status;
 sub abstract { 'clean all build artifacts in the cyrus-imapd source tree' }
 
 sub execute ($self, $opt, $args) {
-  my $root = "/srv/cyrus-imapd";
+  my $root = $self->app->repo_root;
   chdir $root or die "can't chdir to $root: $!";
 
   # -d: recurses into untracked directories

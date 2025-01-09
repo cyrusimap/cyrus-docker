@@ -12,7 +12,7 @@ sub execute ($self, $opt, $args) {
     Process::Status->assert_ok('starting rsyslog');
   }
 
-  my $root = "/srv/cyrus-imapd/cassandane";
+  my $root = $self->app->repo_root->child('cassandane');
   chdir $root or die "can't chdir to $root: $!";
 
   unless (-e "cassandane.ini") {
