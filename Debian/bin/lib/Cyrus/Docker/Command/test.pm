@@ -6,6 +6,15 @@ use Cyrus::Docker -command;
 use Path::Tiny;
 use Process::Status;
 
+sub opt_spec {
+  return (
+    [ 'format=s', "which formatter to use; default: prettier",
+                  { default => 'prettier' } ],
+    [ 'slow',     "run slow tests" ],
+    [ 'rerun',    "only run previously-failed tests" ],
+  );
+}
+
 sub execute ($self, $opt, $args) {
   unless (-e '/run/rsyslogd.pid') {
     system('/usr/sbin/rsyslogd');
@@ -35,11 +44,10 @@ sub execute ($self, $opt, $args) {
   Process::Status->assert_ok('Cassandane make');
 
   system(
-    qw(
-      setpriv --reuid=cyrus --regid=mail
-              --clear-groups --inh-caps=-all
-              ./testrunner.pl -f pretty -j 8
-    ),
+    qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
+    qw( ./testrunner.pl -j 8 -f ), $opt->format,
+      ($opt->rerun  ? '--rerun' : ()),
+      ($opt->slow   ? '--slow'  : ()),
     @$args,
   );
 
