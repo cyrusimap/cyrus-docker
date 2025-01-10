@@ -10,7 +10,7 @@ sub opt_spec {
   return (
     [ 'format=s', "which formatter to use; default: prettier",
                   { default => 'prettier' } ],
-    [ 'slow',     "run slow tests" ],
+    [ 'slow!',    "run slow tests", { default => 1 } ],
     [ 'rerun',    "only run previously-failed tests" ],
   );
 }
