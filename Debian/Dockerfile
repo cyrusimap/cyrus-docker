@@ -61,7 +61,6 @@ apt-get -y install --no-install-recommends \
     libnews-nntpclient-perl \
     libpath-tiny-perl \
     libpam0g-dev \
-    libpcre3-dev \
     libplack-perl \
     libsasl2-dev \
     libsnmp-dev \
