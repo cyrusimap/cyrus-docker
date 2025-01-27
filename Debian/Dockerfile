@@ -258,8 +258,6 @@ git clone --depth 1 --shallow-submodules -b $CYRUSLIBS_BRANCH \
   https://github.com/cyrusimap/cyruslibs.git
 cd cyruslibs
 # RUN git checkout origin/master
-git submodule init
-git submodule update
 ./build.sh
 cd ..
 $CLEANUP && rm -rf cyruslibs || true
