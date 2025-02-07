@@ -35,8 +35,6 @@ sub execute ($self, $opt, $args) {
     die "git-version.sh can't decide what version this is; giving up!\n";
   }
 
-  $ENV{CFLAGS}="-g -W -Wall -Wextra -Werror";
-
   my $with_sanitizer = "";
 
   if ($opt->sanitizer) {
