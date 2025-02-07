@@ -12,6 +12,7 @@ sub opt_spec {
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
+      [ 'ubsan-trap' => 'build with UBSan and trap on error' ],
     ] } ],
   );
 }
@@ -51,8 +52,12 @@ sub execute ($self, $opt, $args) {
       unless ($dont_suppress) {
         $ENV{LSAN_OPTIONS} = "$lsan_opts:suppressions=leaksanitizer.suppress";
       }
-    } elsif ($opt->sanitizer eq 'ubsan') {
+    } elsif ($opt->sanitizer =~ /^ubsan/) {
       $ENV{CYRUS_SAN_FLAGS} = '-fsanitize=undefined';
+
+      if ($opt->sanitizer eq 'ubsan_trap') {
+        $ENV{CYRUS_SAN_FLAGS} .= ' -fsanitize-undefined-trap-on-error';
+      }
     }
   }
 
