@@ -35,12 +35,10 @@ sub execute ($self, $opt, $args) {
     die "git-version.sh can't decide what version this is; giving up!\n";
   }
 
-  my $with_sanitizer = "";
+  my $with_sanitizer = $opt->sanitizer ? " with " . $opt->sanitizer : "";
 
   if ($opt->sanitizer) {
     if ($opt->sanitizer eq 'asan') {
-      $with_sanitizer = " with asan";
-
       $ENV{CYRUS_SAN_FLAGS} = '-fsanitize=address';
 
       my $lsan_opts = $ENV{LSAN_OPTIONS} || "";
@@ -68,14 +66,14 @@ sub execute ($self, $opt, $args) {
         $ENV{CYRUS_SAN_FLAGS} .= ' -static-libasan';
       }
 
-    } elsif ($opt->sanitizer =~ /^ubsan/) {
-      $with_sanitizer = " with ubsan";
-
+    } elsif ($opt->sanitizer =~ /\Aubsan(_trap)?\z/) {
       $ENV{CYRUS_SAN_FLAGS} = '-fsanitize=undefined';
 
       if ($opt->sanitizer eq 'ubsan_trap') {
         $ENV{CYRUS_SAN_FLAGS} .= ' -fsanitize-undefined-trap-on-error';
       }
+    } else {
+      die "Unknown sanitizer mode '" . $opt->sanitizer . "'?!\n";
     }
   }
 
