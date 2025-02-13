@@ -19,6 +19,7 @@ apt-get -y install --no-install-recommends \
     bison \
     build-essential \
     check \
+    clang \
     cmake \
     comerr-dev \
     cpanminus \
@@ -37,6 +38,7 @@ apt-get -y install --no-install-recommends \
     libanyevent-perl \
     libbsd-dev \
     libbsd-resource-perl \
+    libclang-rt-dev \
     libcld2-dev \
     libclone-perl \
     libconfig-inifiles-perl \
@@ -85,6 +87,7 @@ apt-get -y install --no-install-recommends \
     libwww-perl \
     libxapian-dev \
     libzephyr-dev \
+    llvm \
     lsb-base \
     net-tools \
     perl \
