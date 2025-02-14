@@ -141,6 +141,7 @@ apt-get -y install --no-install-recommends \
     python3-sphinx \
     python3-sphinx-rtd-theme \
     rsync \
+    valgrind \
     `# BEGIN for cyrus-docker or just quality of life` \
     less \
     tini
