@@ -6,6 +6,8 @@ use Cyrus::Docker -command;
 use Path::Tiny;
 use Process::Status;
 
+sub abstract { 'test the cyrus-imapd repo with cassandane' }
+
 sub opt_spec {
   return (
     [ 'format=s', "which formatter to use; default: prettier",
