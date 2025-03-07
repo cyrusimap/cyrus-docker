@@ -2,7 +2,7 @@ name: Create and publish a Docker image
 
 on:
   push:
-    branches: [ 'main', 'master' ]
+    branches: [ 'dev', 'master' ]
   schedule:
     - cron: '0 3 * * *'
 
@@ -12,7 +12,11 @@ env:
 
 jobs:
   build-and-push-image:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ "", "-arm" ]
+    runs-on: ubuntu-24.04${{ matrix.platform }}
 
     permissions:
       contents: read
@@ -39,9 +43,10 @@ jobs:
           labels: |
             org.cyrusimap.cyrus-docker.built-from=${{ github.sha }}
           tags: |
-            type=schedule
-            type=ref,event=branch
-            type=raw,value=bookworm,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
+            type=schedule,enable=${{ matrix.platform == '' }}
+            type=ref,event=branch,enable=${{ matrix.platform == '' }}
+            type=raw,value=bookworm-dev${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'dev') }}
+            type=raw,value=bookworm${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - name: Build and push Docker image
         id: push
