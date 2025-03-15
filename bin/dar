@@ -7,15 +7,9 @@ package Cyrus::Docker::dar;
 
 use utf8;
 
-use Getopt::Long ();
-
 BEGIN {
   my @missing;
   for my $prereq (
-    # Core libraries, not really needed here, but keeping it simple...
-    'Digest::SHA',
-    'JSON::PP',
-
     'IPC::Run',
     'Path::Tiny',
     'Process::Status',
@@ -34,10 +28,14 @@ BEGIN {
   }
 }
 
+# Core
 use Digest::SHA qw(sha1_hex);
-# use Getopt::Long::Descriptive;
-use IPC::Run qw(run);
+use Getopt::Long ();
 use JSON::PP;
+use Term::ANSIColor qw(colored);
+
+# CPAN
+use IPC::Run qw(run);
 use Path::Tiny;
 use Process::Status;
 
@@ -46,40 +44,53 @@ my $MINIMUM_IMAGE_VERSION = 1;
 binmode *STDOUT, ':encoding(utf-8)';
 binmode *STDERR, ':encoding(utf-8)';
 
-my $HELP = <<'END';
-dar is a little program to help you use the Cyrus docker image for testing your
-work in your own checkout of the cyrusimapd repository.
+my $is_tty = -t *STDOUT;
 
-The idea is that it runs a do-nothing container that's ready to build and test
-Cyrus, and then you can tell it to build and test Cyrus at your whim.  It will
-only manage one container per checkout (as identified by absolute path).
+unless ($is_tty) {
+  # Why //=?  So you can, in a pinch, undisable them without a TTY by setting
+  # it to a 0.
+  $ENV{ANSI_COLORS_DISABLED} //= 1;
+}
 
-The simplest thing to do is to run "dar smoke", which will start a container
-(if needed), then configure, build, and test Cyrus using the "cyd smoke"
-command packed inside the cyrus-docker image.  If you want to pass arguments to
-smoke, you can run "dar smoke -- test1 test2 test3", for example.
-
-You can run other cyd commands through dar.  If you want to get a shell and
-look into what went wrong on your last test run, you can run "dar shell".  If
-you want to run something other than a cyd command, use "dar run -- XYZ ABC" to
-run XYZ ABC directly in the container.
-
-dar will start a container just in time to run whatever command you want, and
-will leave it running for more commands.  If you want to clean up the container
-it's got running, run "dar prune".
-
-If you want to start a container before running any particular commands, you
-can run "dar start", which is mostly useful to allow you to pass "--image" to
-specify an alternate image to use for the container.
-
-The default image is ghcr.io/cyrusimap/cyrus-docker:nightly but you can set a
-different default for all your uses of "dar" by creating the file
-~/.cyrus-docker/config, which should contain a JSON object.  The only
-meaningful key, for now, is "default_image", which provides an alternate
-default image.
+my $MENU = <<~'END';
+          ////  ||| dar: the cyrus-docker dev tool
+        ////    |||
+      ////      ||| Run "dar COMMAND".  Here are some commands:
+    ////        |||  • pull   - pull the latest docker container image
+  ////          |||  • start  - start a container to build in the current dir
+  \\\\          |||  • prune  - stop and destroy the container for this dir
+    \\\\        |||  • help   - get more information about how to use dar
+      \\\\      |||
+        \\\\    ||| Any unknown command will be passed to the cyd tool inside
+          \\\\  ||| the running container, if you have one.
 END
 
-my $command = @ARGV ? shift(@ARGV) : 'help';
+$MENU =~ s{([/|\\]+)}{colored(['bright_blue'], "$1")}ge;
+$MENU =~ s{• \K([^-]+)}{colored(['bright_yellow'], "$1")}ge;
+
+my $HELP = <<'END';
+dar helps manage Docker containers for building and testing cyrus-imapd, using
+a copy of the source stored on your computer.
+
+To get a contaner running…
+
+1. cd to your local clone of cyrus-imapd
+2. run "dar pull" to make sure you have the latest cyrus-docker image
+3. run "dar start" to get a running container
+
+Once you have that, you run "dar XYZ" to run "cyd XYZ" inside the container.
+This is most useful for: built, test, smoke, and sh.
+
+When you want to clean up the container you've got running, run "dar prune".
+
+The default image is ghcr.io/cyrusimap/cyrus-docker:bookworm (or bookworm-arm
+on ARM64), but you can set a different default for all your uses of "dar" by
+creating the file ~/.cyrus-docker/config, which should contain a JSON object.
+The only meaningful key, for now, is "default_image", which provides an
+alternate default image.
+END
+
+my $command = @ARGV ? shift(@ARGV) : 'menu';
 
 # turn --help into help, and support old-style "--prune" etc.
 $command =~ s/\A--//;
@@ -104,6 +115,11 @@ my sub emptyref {
 
 sub do_help {
   print $HELP;
+  return;
+}
+
+sub do_menu {
+  print $MENU;
   return;
 }
 
