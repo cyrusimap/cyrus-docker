@@ -1,20 +1,26 @@
 #!/usr/bin/env perl
-use v5.36.0;
+use v5.34.0; # This is what macOS is shipping now. -- rjbs, 2025-03-14
+use experimental 'signatures'; # Everything we use is stable and accepted.
+use warnings;
 
 package Cyrus::Docker::dar;
 
 use utf8;
 
+use Getopt::Long ();
+
 BEGIN {
   my @missing;
-  for my $prereq (qw(
-    Digest::SHA
-    Getopt::Long::Descriptive
-    IPC::Run
-    JSON::PP
-    Path::Tiny
-    Process::Status
-  )) {
+  for my $prereq (
+    # Core libraries, not really needed here, but keeping it simple...
+    'Digest::SHA',
+    'JSON::PP',
+
+    # 'Getopt::Long::Descriptive',
+    'IPC::Run',
+    'Path::Tiny',
+    'Process::Status',
+  ) {
     my $ok = eval "require $prereq; 1";
     push @missing, $prereq unless $ok;
   }
@@ -30,7 +36,7 @@ BEGIN {
 }
 
 use Digest::SHA qw(sha1_hex);
-use Getopt::Long::Descriptive;
+# use Getopt::Long::Descriptive;
 use IPC::Run qw(run);
 use JSON::PP;
 use Path::Tiny;
@@ -74,41 +80,20 @@ meaningful key, for now, is "default_image", which provides an alternate
 default image.
 END
 
-my ($opt, $usage) = describe_options(
-  '%c %o [TO-RUN]',
-  [
-    action => hidden => {
-      default => 'exec',
-      one_of  => [
-        [ help  => 'print an explanation of how to use dar' ],
-        [ start => 'start a container running for future commands' ],
-        [ prune => 'remove existing container, stopping if needed' ],
-        [ exec  => 'start if none started; docker exec', { hidden => 1 } ],
-      ],
-    }
-  ],
-  [],
-  [ 'keep',     'keep the container after exit' ],
-  [ 'image=s',  'which image to use' ],
-  [ 'run-outside-clone', 'run even if cwd is not a cyrus-imapd clone' ],
-);
-
-unless (-e 'imap/imapd.c' || $opt->run_outside_clone) {
-  die <<~'END';
-  The current directory doesn't appear to be a cyrus-imapd clone.  To run dar
-  anyway, pass the --run-outside-clone switch.
-  END
-}
+my $command = @ARGV ? shift(@ARGV) : 'help';
 
 my $ABS_CWD = path('.')->absolute;
 
 my $CONFIG  = Cyrus::Docker::dar->load_config();
 
-my $method = __PACKAGE__->can("do_" . $opt->action);
+my $method = __PACKAGE__->can("do_" . $command);
 
-$method || $usage->die;
+unless ($method) {
+  $method = __PACKAGE__->can('do_exec');
+  unshift @ARGV, $command;
+}
 
-__PACKAGE__->$method($opt, [@ARGV]);
+__PACKAGE__->$method([@ARGV]);
 
 my sub emptyref {
   my $str = q{};
@@ -120,7 +105,26 @@ sub do_help {
   return;
 }
 
-sub do_start ($class, $opt, $args) {
+sub do_start ($class, $args) {
+  # Generally, this should not fail..?
+  die "error parsing arguments!\n" unless Getopt::Long::GetOptionsFromArray(
+    $args,
+    'keep'    => \my $opt_keep,
+    'image=s' => \my $opt_image,
+    'run-outside-clone' => \my $run_outside_clone,
+  );
+
+  #   [ 'keep',     'keep the container after exit' ],
+  #   [ 'image=s',  'which image to use' ],
+  #   [ 'run-outside-clone', 'run even if cwd is not a cyrus-imapd clone' ],
+
+  unless (-e 'imap/imapd.c' || $run_outside_clone) {
+    die <<~'END';
+    The current directory doesn't appear to be a cyrus-imapd clone.  To run dar
+    anyway, pass the --run-outside-clone switch.
+    END
+  }
+
   my $existing_container = $class->_existing_container;
 
   if ($existing_container && $existing_container->{State} ne 'exited') {
@@ -130,7 +134,7 @@ sub do_start ($class, $opt, $args) {
   my $name = $class->container_name_for_cwd;
   say "⏳ Starting container $name to idle.";
 
-  my $image_specifier = $class->_requested_image($opt);
+  my $image_specifier = $class->_requested_image($opt_image);
   my $image = $class->_get_image($image_specifier);
 
   my $image_version = $image->{Config}{Labels}{'org.cyrusimap.cyrus-docker.version'};
@@ -149,7 +153,7 @@ sub do_start ($class, $opt, $args) {
       '--detach',
       '--name', $name,
       '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
-      ($opt->keep ? () : '--rm'),
+      ($opt_keep ? () : '--rm'),
       $image_specifier,
       qw( cyd idle )
     ],
@@ -183,9 +187,8 @@ sub do_start ($class, $opt, $args) {
   return $class->_existing_container;
 }
 
-sub do_prune ($class, $opt, $args) {
+sub do_prune ($class, $args) {
   @$args && die "❌ You can't supply a command to run with --prune.\n";
-  $opt->image && die "❌ You can't use --image with --prune.\n";
 
   my $container = $class->_existing_container;
 
@@ -221,25 +224,11 @@ sub do_prune ($class, $opt, $args) {
   }
 }
 
-sub do_exec ($class, $opt, $args) {
+sub do_exec ($class, $args) {
   my $container = $class->_existing_container;
 
-  if ($container && $opt->image && $container->{Image} ne $opt->image) {
-    die "❌ You've already got a running container, but for a different image.\n";
-  }
-
   unless ($container && $container->{State} eq 'running') {
-    $container = $class->do_start($opt, $args);
-  }
-
-  unless ($container) {
-    # I don't think this should ever happen…
-    die "❌ Couldn't get a container to run that in, sorry!\n";
-  }
-
-  if ($container->{State} ne 'running') {
-    # I don't think this should ever happen either...
-    die "❌ Existing container isn't running, you should prune...\n";
+    die qq{❌ You don't have a running container.  You'll want to run "dar start".\n};
   }
 
   if ($container->{Command} ne q{"cyd idle"}) {
@@ -260,8 +249,8 @@ sub do_exec ($class, $opt, $args) {
   );
 }
 
-sub _requested_image ($class, $opt) {
-  return $opt->image
+sub _requested_image ($class, $option) {
+  return $option
       // $CONFIG->{default_image}
       // 'ghcr.io/cyrusimap/cyrus-docker:nightly';
 }
