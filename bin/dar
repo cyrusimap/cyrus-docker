@@ -53,16 +53,23 @@ unless ($is_tty) {
 }
 
 my $MENU = <<~'END';
-          ////  ||| dar: the cyrus-docker dev tool
-        ////    |||
-      ////      ||| Run "dar COMMAND".  Here are some commands:
-    ////        |||  • pull   - pull the latest docker container image
-  ////          |||  • start  - start a container to build in the current dir
-  \\\\          |||  • prune  - stop and destroy the container for this dir
-    \\\\        |||  • help   - get more information about how to use dar
-      \\\\      |||
-        \\\\    ||| Any unknown command will be passed to the cyd tool inside
-          \\\\  ||| the running container, if you have one.
+dar: the cyrus-docker dev tool
+
+Run "dar COMMAND".  Here are some commands:
+ • pull     - pull the latest docker container image
+ • start    - start a container to build in the current dir
+ • prune    - stop and destroy the container for this dir
+ • help     - get more information about how to use dar
+ • run      - run the given command in the container
+ • cyd      - a shortcut for "dar run cyd ..."
+
+And these commands all run "dar cyd CMD" in the container:
+ • build    - configure and compile Cyrus
+ • clean    - "make clean" the repo
+ • makedocs - build the html version of the docs
+ • shell    - run a shell
+ • smoke    - sugar for "build then test"
+ • test     - run the Cassandane test suite
 END
 
 $MENU =~ s{([/|\\]+)}{colored(['bright_blue'], "$1")}ge;
@@ -90,7 +97,7 @@ The only meaningful key, for now, is "default_image", which provides an
 alternate default image.
 END
 
-my $command = @ARGV ? shift(@ARGV) : 'menu';
+my $command = @ARGV ? shift(@ARGV) : 'commands';
 
 # turn --help into help, and support old-style "--prune" etc.
 $command =~ s/\A--//;
@@ -102,8 +109,7 @@ my $CONFIG  = Cyrus::Docker::dar->load_config();
 my $method = __PACKAGE__->can("do_" . $command);
 
 unless ($method) {
-  $method = __PACKAGE__->can('do_exec');
-  unshift @ARGV, $command;
+  die qq{❌ Unknown command requested: "$command".  Try "dar help".\n};
 }
 
 __PACKAGE__->$method([@ARGV]);
@@ -118,7 +124,7 @@ sub do_help {
   return;
 }
 
-sub do_menu {
+sub do_commands {
   print $MENU;
   return;
 }
@@ -298,7 +304,31 @@ sub do_prune ($class, $args) {
   }
 }
 
-sub do_exec ($class, $args) {
+BEGIN {
+  for my $cyd_cmd (qw( build clean makedocs shell smoke test)) {
+    my $code = sub ($class, $args) {
+      $class->do_run([ 'cyd', $cyd_cmd, @$args ]);
+    };
+
+    no strict 'refs';
+    *{"do_$cyd_cmd"} = $code;
+  }
+
+  {
+    no warnings 'once';
+    *do_sh = \&do_shell;
+  }
+}
+
+sub do_clone ($class, $args) {
+  die "❌ clone is a cyd command, but not a dar command.\n";
+}
+
+sub do_cyd ($class, $args) {
+  $class->do_run([ 'cyd', @$args ]);
+}
+
+sub do_run ($class, $args) {
   my $container = $class->_existing_container;
 
   unless ($container && $container->{State} eq 'running') {
@@ -312,14 +342,10 @@ sub do_exec ($class, $args) {
 
   say "⏳ Executing command in container $container->{ID}...";
 
-  my @to_run = @$args && $args->[0] eq 'run'  ? ($args->@[1..$#$args])
-             : @$args                         ? ('cyd', @$args)
-             :                                  ('cyd', 'shell');
-
   exec(
     qw( docker exec --workdir /srv/cyrus-imapd -ti ),
     $container->{ID},
-    @to_run,
+    @$args,
   );
 }
 
