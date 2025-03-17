@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use v5.34.0; # This is what macOS is shipping now. -- rjbs, 2025-03-14
-use experimental 'signatures'; # Everything we use is stable and accepted.
 use warnings;
+use experimental 'signatures'; # Everything we use is stable and accepted.
 
 package Cyrus::Docker::dar;
 
@@ -86,7 +86,7 @@ To get a contaner running…
 3. run "dar start" to get a running container
 
 Once you have that, you run "dar XYZ" to run "cyd XYZ" inside the container.
-This is most useful for: built, test, smoke, and sh.
+This is most useful for: build, test, smoke, and sh.
 
 When you want to clean up the container you've got running, run "dar prune".
 
@@ -305,7 +305,7 @@ sub do_prune ($class, $args) {
 }
 
 BEGIN {
-  for my $cyd_cmd (qw( build clean makedocs shell smoke test)) {
+  for my $cyd_cmd (qw( build clean makedocs shell smoke test )) {
     my $code = sub ($class, $args) {
       $class->do_run([ 'cyd', $cyd_cmd, @$args ]);
     };
