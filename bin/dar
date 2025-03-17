@@ -16,7 +16,6 @@ BEGIN {
     'Digest::SHA',
     'JSON::PP',
 
-    # 'Getopt::Long::Descriptive',
     'IPC::Run',
     'Path::Tiny',
     'Process::Status',
@@ -67,10 +66,10 @@ run XYZ ABC directly in the container.
 
 dar will start a container just in time to run whatever command you want, and
 will leave it running for more commands.  If you want to clean up the container
-it's got running, run "dar --prune".
+it's got running, run "dar prune".
 
 If you want to start a container before running any particular commands, you
-can run "dar --start", which is mostly useful to allow you to pass "--image" to
+can run "dar start", which is mostly useful to allow you to pass "--image" to
 specify an alternate image to use for the container.
 
 The default image is ghcr.io/cyrusimap/cyrus-docker:nightly but you can set a
@@ -81,6 +80,9 @@ default image.
 END
 
 my $command = @ARGV ? shift(@ARGV) : 'help';
+
+# turn --help into help, and support old-style "--prune" etc.
+$command =~ s/\A--//;
 
 my $ABS_CWD = path('.')->absolute;
 
@@ -127,14 +129,54 @@ sub do_start ($class, $args) {
 
   my $existing_container = $class->_existing_container;
 
-  if ($existing_container && $existing_container->{State} ne 'exited') {
-    die "❌ The container $existing_container->{Names} is already running!\n";
+  if ($existing_container) {
+    unless ($existing_container->{State} eq 'exited') {
+      # There are states other than running and exited, but we're going to
+      # treat anything but "exited" as "still running" for now.
+      die "❌ The container $existing_container->{Names} is already running!\n";
+    }
+
+    if ($existing_container->{Command} ne q{"cyd idle"}) {
+      # I don't think this should ever happen either...
+      die "❌ Weird: existing container isn't set to run cyd idle.  Giving up.\n";
+    }
+
+    say "⏳ Restarting container $existing_container->{Names} to idle.";
+    run(
+      [ 'docker', 'start', $existing_container->{ID} ],
+      emptyref(),
+      \my $container_id,
+    );
+
+    Process::Status->assert_ok("❌ Restarting container");
+    return $existing_container;
   }
 
   my $name = $class->container_name_for_cwd;
   say "⏳ Starting container $name to idle.";
 
   my $image_specifier = $class->_requested_image($opt_image);
+
+  {
+    # Assert that we have the image.  If not, point user to "dar pull"
+    run(
+      [ 'docker', 'image', 'ls', '--format', 'json', $image_specifier ],
+      emptyref(),
+      \my $image_json_lines,
+    );
+
+    Process::Status->assert_ok("❌ Getting list of available images");
+
+    chomp $image_json_lines;
+    my @lines = split /\n/, $image_json_lines;
+
+    @lines == 0
+      && die qq{❌ The image $image_specifier isn't available.};
+
+    @lines > 1
+      && die qq{❌ $image_specifier matches more than one candidate image.};
+  }
+
   my $image = $class->_get_image($image_specifier);
 
   my $image_version = $image->{Config}{Labels}{'org.cyrusimap.cyrus-docker.version'};
