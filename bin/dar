@@ -107,6 +107,22 @@ sub do_help {
   return;
 }
 
+sub do_pull ($class, $args) {
+  # Generally, this should not fail..?
+  die "error parsing arguments!\n" unless Getopt::Long::GetOptionsFromArray(
+    $args,
+    'image=s' => \my $opt_image,
+  );
+
+  my $image_specifier = $class->_requested_image($opt_image);
+
+  system('docker', 'pull', $image_specifier);
+  $? && die "❌ Error fetching image $image_specifier\n";
+
+  say "✅ Container image up to date.";
+  return;
+}
+
 sub do_start ($class, $args) {
   # Generally, this should not fail..?
   die "error parsing arguments!\n" unless Getopt::Long::GetOptionsFromArray(
@@ -171,7 +187,7 @@ sub do_start ($class, $args) {
     my @lines = split /\n/, $image_json_lines;
 
     @lines == 0
-      && die qq{❌ The image $image_specifier isn't available.};
+      && die qq{❌ The image $image_specifier isn't available.  Maybe you should "dar pull".};
 
     @lines > 1
       && die qq{❌ $image_specifier matches more than one candidate image.};
