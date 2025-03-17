@@ -79,14 +79,15 @@ my $HELP = <<'END';
 dar helps manage Docker containers for building and testing cyrus-imapd, using
 a copy of the source stored on your computer.
 
-To get a contaner running…
+To get a container running…
 
 1. cd to your local clone of cyrus-imapd
 2. run "dar pull" to make sure you have the latest cyrus-docker image
 3. run "dar start" to get a running container
 
-Once you have that, you run "dar XYZ" to run "cyd XYZ" inside the container.
-This is most useful for: build, test, smoke, and sh.
+Once you have that, you generally run "dar XYZ" to run "cyd XYZ" inside the
+container.  This is most useful for: build, test, smoke, and sh.  You can also
+use "dar run ..." to run that "..." in the container, for non-cyd commands.
 
 When you want to clean up the container you've got running, run "dar prune".
 
@@ -209,10 +210,10 @@ sub do_start ($class, $args) {
     my @lines = split /\n/, $image_json_lines;
 
     @lines == 0
-      && die qq{❌ The image $image_specifier isn't available.  Maybe you should "dar pull".};
+      && die qq{❌ The image $image_specifier isn't available.  Maybe you should "dar pull".\n};
 
     @lines > 1
-      && die qq{❌ $image_specifier matches more than one candidate image.};
+      && die qq{❌ $image_specifier matches more than one candidate image.\n};
   }
 
   my $image = $class->_get_image($image_specifier);
