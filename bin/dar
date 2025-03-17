@@ -291,10 +291,13 @@ sub do_exec ($class, $args) {
   );
 }
 
-sub _requested_image ($class, $option) {
-  return $option
+sub _requested_image ($class, $opt_image) {
+  state $uname  = `uname -a`;
+  state $suffix = $uname =~ /\barm64\b/ ? '-arm' : q{};
+
+  return $opt_image
       // $CONFIG->{default_image}
-      // 'ghcr.io/cyrusimap/cyrus-docker:nightly';
+      // "ghcr.io/cyrusimap/cyrus-docker:bookworm$suffix";
 }
 
 sub _get_image ($class, $image_specifier) {
