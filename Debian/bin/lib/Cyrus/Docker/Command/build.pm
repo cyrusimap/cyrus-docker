@@ -37,9 +37,11 @@ sub execute ($self, $opt, $args) {
 
   my $with_sanitizer = $opt->sanitizer ? " with " . $opt->sanitizer : "";
 
+  my $san_flags = q{};
+
   if ($opt->sanitizer) {
     if ($opt->sanitizer eq 'asan') {
-      $ENV{CYRUS_SAN_FLAGS} = '-fsanitize=address';
+      $san_flags = '-fsanitize=address';
 
       my $lsan_opts = $ENV{LSAN_OPTIONS} || "";
       my $dont_suppress;
@@ -63,16 +65,16 @@ sub execute ($self, $opt, $args) {
       } elsif ($opt->compiler eq 'gcc') {
         # As of at least gcc 12 we need to statically link libasan or cass
         # tests fail with "ASan runtime does not come first..." errors
-        $ENV{CYRUS_SAN_FLAGS} .= ' -static-libasan';
+        $san_flags .= ' -static-libasan';
       }
 
     } elsif ($opt->sanitizer =~ /\Aubsan(_trap)?\z/) {
-      $ENV{CYRUS_SAN_FLAGS} = '-fsanitize=undefined';
+      $san_flags = '-fsanitize=undefined';
 
       $ENV{UBSAN_OPTIONS} = "print_stacktrace=1:halt_on_error=1";
 
       if ($opt->sanitizer eq 'ubsan_trap') {
-        $ENV{CYRUS_SAN_FLAGS} .= ' -fsanitize-undefined-trap-on-error';
+        $san_flags .= ' -fsanitize-undefined-trap-on-error';
       }
     } else {
       die "Unknown sanitizer mode '" . $opt->sanitizer . "'?!\n";
@@ -101,16 +103,43 @@ sub execute ($self, $opt, $args) {
     --enable-replication
     --enable-shared
     --enable-silent-rules
+    --enable-debug-slowio
     --enable-unit-tests
     --enable-xapian
     --enable-jmap
     --with-ldap=/usr"
   );
 
-  local $ENV{CONFIGOPTS} = "@configopts";
+  my $libsdir = '/usr/local/cyruslibs';
+  my $target  = '/usr/cyrus';
 
-  system('./tools/build-with-cyruslibs.sh');
-  Process::Status->assert_ok("building cyrus-imapd");
+  local $ENV{LDFLAGS} = "-L$libsdir/lib/x86_64-linux-gnu -L$libsdir/lib -Wl,-rpath,$libsdir/lib/x86_64-linux-gnu -Wl,-rpath,$libsdir/lib";
+  local $ENV{PKG_CONFIG_PATH} = "$libsdir/lib/x86_64-linux-gnu/pkgconfig:$libsdir/lib/pkgconfig:\$PKG_CONFIG_PATH";
+  local $ENV{CFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings";
+  local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror";
+  local $ENV{PATH} = "$libsdir/bin:$ENV{PATH}";
+
+  my sub run (@args) {
+    say "running: @args";
+    system(@args);
+    Process::Status->assert_ok($args[0]);
+  }
+
+  run(qw( autoreconf -v -i ));
+
+  run(
+    './configure',
+    "--prefix=$target",
+    @configopts,
+    "XAPIAN_CONFIG=$libsdir/bin/xapian-config-1.5",
+  );
+
+  run(qw( make lex-fix ));
+  run(qw( make -j 8 ));
+  run(qw( make -j 8 check ));
+  run(qw( sudo make install ));
+  run(qw( sudo make install-binsymlinks ));
+  run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
 
   system('/usr/cyrus/bin/cyr_info', 'version');
 }
