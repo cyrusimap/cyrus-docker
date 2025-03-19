@@ -69,6 +69,8 @@ sub execute ($self, $opt, $args) {
     } elsif ($opt->sanitizer =~ /\Aubsan(_trap)?\z/) {
       $ENV{CYRUS_SAN_FLAGS} = '-fsanitize=undefined';
 
+      $ENV{UBSAN_OPTIONS} = "print_stacktrace=1:halt_on_error=1";
+
       if ($opt->sanitizer eq 'ubsan_trap') {
         $ENV{CYRUS_SAN_FLAGS} .= ' -fsanitize-undefined-trap-on-error';
       }
