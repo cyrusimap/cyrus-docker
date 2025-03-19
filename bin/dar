@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-use v5.34.0; # This is what macOS is shipping now. -- rjbs, 2025-03-14
+use v5.20.0; # I just want signatures.
 use warnings;
 use experimental 'signatures'; # Everything we use is stable and accepted.
 
@@ -36,7 +36,7 @@ use Term::ANSIColor qw(colored);
 
 # CPAN
 use IPC::Run qw(run);
-use Path::Tiny;
+use Path::Tiny 0.125;
 use Process::Status;
 
 my $MINIMUM_IMAGE_VERSION = 1;
@@ -52,7 +52,7 @@ unless ($is_tty) {
   $ENV{ANSI_COLORS_DISABLED} //= 1;
 }
 
-my $MENU = <<~'END';
+my $MENU = <<'END';
 dar: the cyrus-docker dev tool
 
 Run "dar COMMAND".  Here are some commands:
@@ -115,7 +115,7 @@ unless ($method) {
 
 __PACKAGE__->$method([@ARGV]);
 
-my sub emptyref {
+sub _emptyref {
   my $str = q{};
   return \$str;
 }
@@ -160,10 +160,10 @@ sub do_start ($class, $args) {
   #   [ 'run-outside-clone', 'run even if cwd is not a cyrus-imapd clone' ],
 
   unless (-e 'imap/imapd.c' || $run_outside_clone) {
-    die <<~'END';
-    The current directory doesn't appear to be a cyrus-imapd clone.  To run dar
-    anyway, pass the --run-outside-clone switch.
-    END
+    die <<'END';
+The current directory doesn't appear to be a cyrus-imapd clone.  To run dar
+anyway, pass the --run-outside-clone switch.
+END
   }
 
   my $existing_container = $class->_existing_container;
@@ -183,7 +183,7 @@ sub do_start ($class, $args) {
     say "⏳ Restarting container $existing_container->{Names} to idle.";
     run(
       [ 'docker', 'start', $existing_container->{ID} ],
-      emptyref(),
+      _emptyref(),
       \my $container_id,
     );
 
@@ -200,7 +200,7 @@ sub do_start ($class, $args) {
     # Assert that we have the image.  If not, point user to "dar pull"
     run(
       [ 'docker', 'image', 'ls', '--format', 'json', $image_specifier ],
-      emptyref(),
+      _emptyref(),
       \my $image_json_lines,
     );
 
@@ -238,7 +238,7 @@ sub do_start ($class, $args) {
       $image_specifier,
       qw( cyd idle )
     ],
-    emptyref(),
+    _emptyref(),
     \my $container_id,
   );
 
@@ -280,7 +280,7 @@ sub do_prune ($class, $args) {
 
   run(
     [ qw( docker inspect ), $container->{ID} ],
-    emptyref(),
+    _emptyref(),
     \my $inspect_json,
   );
 
@@ -291,8 +291,8 @@ sub do_prune ($class, $args) {
 
   run(
     [ qw( docker container stop ), $container->{ID} ],
-    emptyref(),
-    emptyref(),
+    _emptyref(),
+    _emptyref(),
   );
 
   Process::Status->assert_ok("❌ Stopping existing container");
@@ -362,7 +362,7 @@ sub _requested_image ($class, $opt_image) {
 sub _get_image ($class, $image_specifier) {
   run(
     [ 'docker', 'image', 'inspect', $image_specifier ],
-    emptyref(),
+    _emptyref(),
     \my $json,
   );
 
