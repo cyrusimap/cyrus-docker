@@ -17,6 +17,7 @@ sub abstract { 'configure, build, and install cyrus-imapd' }
 sub opt_spec {
   return (
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
+    [ 'no-cunit|n',  'do not run make check' ],
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -33,7 +34,7 @@ sub recompile ($self, $opt, $args) {
   say "Recompiling...";
 
   run(qw( make -j 8 ));
-  run(qw( make -j 8 check ));
+  run(qw( make -j 8 check )) unless $opt->no_cunit;
   run(qw( sudo make install ));
 
   system('/usr/cyrus/bin/cyr_info', 'version');
@@ -149,7 +150,7 @@ sub execute ($self, $opt, $args) {
 
   run(qw( make lex-fix ));
   run(qw( make -j 8 ));
-  run(qw( make -j 8 check ));
+  run(qw( make -j 8 check )) unless $opt->no_cunit;
   run(qw( sudo make install ));
   run(qw( sudo make install-binsymlinks ));
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
