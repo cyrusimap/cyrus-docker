@@ -17,6 +17,8 @@ sub abstract { 'configure, build, and install cyrus-imapd' }
 sub opt_spec {
   return (
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
+    [ 'cunit!', "run make check [-n to disable]", { default => 1 } ],
+    [ 'n', "hidden", { implies => { cunit => 0 } } ],
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -37,7 +39,7 @@ sub execute ($self, $opt, $args) {
 
   run(qw( make lex-fix ));
   run(qw( make -j 8 ));
-  run(qw( make -j 8 check ));
+  run(qw( make -j 8 check )) if $opt->cunit;
   run(qw( sudo make install ));
   run(qw( sudo make install-binsymlinks ));
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
