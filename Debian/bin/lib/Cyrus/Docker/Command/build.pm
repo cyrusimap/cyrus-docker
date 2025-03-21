@@ -18,6 +18,9 @@ sub opt_spec {
   return (
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
     [ 'no-cunit|n',  'do not run make check' ],
+    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
+                     { default => 8 },
+    ],
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -31,10 +34,12 @@ sub opt_spec {
 }
 
 sub recompile ($self, $opt, $args) {
+  my $jobs = $opt->jobs;
+
   say "Recompiling...";
 
-  run(qw( make -j 8 ));
-  run(qw( make -j 8 check )) unless $opt->no_cunit;
+  run(qw( make -j ), $jobs);
+  run(qw( make -j ), $jobs, qw( check )) unless $opt->no_cunit;
   run(qw( sudo make install ));
 
   system('/usr/cyrus/bin/cyr_info', 'version');
@@ -148,9 +153,11 @@ sub execute ($self, $opt, $args) {
     "XAPIAN_CONFIG=$libsdir/bin/xapian-config-1.5",
   );
 
+  my $jobs = $opt->jobs;
+
   run(qw( make lex-fix ));
-  run(qw( make -j 8 ));
-  run(qw( make -j 8 check )) unless $opt->no_cunit;
+  run(qw( make -j ), $jobs);
+  run(qw( make -j ), $jobs, qw( check )) unless $opt->no_cunit;
   run(qw( sudo make install ));
   run(qw( sudo make install-binsymlinks ));
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
