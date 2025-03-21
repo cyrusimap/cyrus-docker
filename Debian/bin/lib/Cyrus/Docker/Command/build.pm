@@ -19,6 +19,9 @@ sub opt_spec {
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
     [ 'cunit!', "run make check [-n to disable]", { default => 1 } ],
     [ 'n', "hidden", { implies => { cunit => 0 } } ],
+    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
+                     { default => 8 },
+    ],
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -37,11 +40,13 @@ sub execute ($self, $opt, $args) {
 
   $self->configure($opt) unless $opt->recompile;
 
-  run(qw( make lex-fix ));
-  run(qw( make -j 8 ));
-  run(qw( make -j 8 check )) if $opt->cunit;
-  run(qw( sudo make install ));
-  run(qw( sudo make install-binsymlinks ));
+  my @jobs = ("-j", $opt->jobs);
+
+  run(qw( make lex-fix                  ), @jobs);
+  run(qw( make                          ), @jobs);
+  run(qw( make check                    ), @jobs) if $opt->cunit;
+  run(qw( sudo make install             ), @jobs);
+  run(qw( sudo make install-binsymlinks ), @jobs);
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
 
   system('/usr/cyrus/bin/cyr_info', 'version');
