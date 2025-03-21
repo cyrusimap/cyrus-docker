@@ -19,6 +19,7 @@ sub opt_spec {
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
     [ 'cunit!', "run make check [-n to disable]", { default => 1 } ],
     [ 'n', "hidden", { implies => { cunit => 0 } } ],
+    [ 'with-sphinx|s', 'enable sphinx docs' ],
     [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
                      { default => 8 },
     ],
@@ -136,6 +137,8 @@ sub configure ($self, $opt) {
     --enable-jmap
     --with-ldap=/usr"
   );
+
+  push @configopts, '--with-sphinx-build=no' unless $opt->with_sphinx;
 
   my $libsdir = '/usr/local/cyruslibs';
   my $target  = '/usr/cyrus';
