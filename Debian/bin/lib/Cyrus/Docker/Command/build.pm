@@ -6,10 +6,17 @@ use Cyrus::Docker -command;
 use Process::Status;
 use Term::ANSIColor qw(colored);
 
+my sub run (@args) {
+  say "running: @args";
+  system(@args);
+  Process::Status->assert_ok($args[0]);
+}
+
 sub abstract { 'configure, build, and install cyrus-imapd' }
 
 sub opt_spec {
   return (
+    [ 'recompile|r', 'recompile, make check, and install a previous build' ],
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -22,9 +29,21 @@ sub opt_spec {
   );
 }
 
+sub recompile ($self, $opt, $args) {
+  say "Recompiling...";
+
+  run(qw( make -j 8 ));
+  run(qw( make -j 8 check ));
+  run(qw( sudo make install ));
+
+  system('/usr/cyrus/bin/cyr_info', 'version');
+}
+
 sub execute ($self, $opt, $args) {
   my $root = $self->app->repo_root;
   chdir $root or die "can't chdir to $root: $!";
+
+  return $self->recompile($opt, $args) if $opt->recompile;
 
   my $version = `./tools/git-version.sh`;
   Process::Status->assert_ok("determining git version");
@@ -118,12 +137,6 @@ sub execute ($self, $opt, $args) {
   local $ENV{CFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings";
   local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror";
   local $ENV{PATH} = "$libsdir/bin:$ENV{PATH}";
-
-  my sub run (@args) {
-    say "running: @args";
-    system(@args);
-    Process::Status->assert_ok($args[0]);
-  }
 
   run(qw( autoreconf -v -i ));
 
