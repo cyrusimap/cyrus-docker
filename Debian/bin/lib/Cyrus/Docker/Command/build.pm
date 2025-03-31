@@ -6,10 +6,23 @@ use Cyrus::Docker -command;
 use Process::Status;
 use Term::ANSIColor qw(colored);
 
+my sub run (@args) {
+  say "running: @args";
+  system(@args);
+  Process::Status->assert_ok($args[0]);
+}
+
 sub abstract { 'configure, build, and install cyrus-imapd' }
 
 sub opt_spec {
   return (
+    [ 'recompile|r', 'recompile, make check, and install a previous build' ],
+    [ 'cunit!', "run make check [-n to disable]", { default => 1 } ],
+    [ 'n', "hidden", { implies => { cunit => 0 } } ],
+    [ 'with-sphinx|s', 'enable sphinx docs' ],
+    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
+                     { default => 8 },
+    ],
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -26,6 +39,21 @@ sub execute ($self, $opt, $args) {
   my $root = $self->app->repo_root;
   chdir $root or die "can't chdir to $root: $!";
 
+  $self->configure($opt) unless $opt->recompile;
+
+  my @jobs = ("-j", $opt->jobs);
+
+  run(qw( make lex-fix                  ), @jobs);
+  run(qw( make                          ), @jobs);
+  run(qw( make check                    ), @jobs) if $opt->cunit;
+  run(qw( sudo make install             ), @jobs);
+  run(qw( sudo make install-binsymlinks ), @jobs);
+  run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
+
+  system('/usr/cyrus/bin/cyr_info', 'version');
+}
+
+sub configure ($self, $opt) {
   my $version = `./tools/git-version.sh`;
   Process::Status->assert_ok("determining git version");
 
@@ -110,6 +138,8 @@ sub execute ($self, $opt, $args) {
     --with-ldap=/usr"
   );
 
+  push @configopts, '--with-sphinx-build=no' unless $opt->with_sphinx;
+
   my $libsdir = '/usr/local/cyruslibs';
   my $target  = '/usr/cyrus';
 
@@ -119,12 +149,6 @@ sub execute ($self, $opt, $args) {
   local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror";
   local $ENV{PATH} = "$libsdir/bin:$ENV{PATH}";
 
-  my sub run (@args) {
-    say "running: @args";
-    system(@args);
-    Process::Status->assert_ok($args[0]);
-  }
-
   run(qw( autoreconf -v -i ));
 
   run(
@@ -133,15 +157,6 @@ sub execute ($self, $opt, $args) {
     @configopts,
     "XAPIAN_CONFIG=$libsdir/bin/xapian-config-1.5",
   );
-
-  run(qw( make lex-fix ));
-  run(qw( make -j 8 ));
-  run(qw( make -j 8 check ));
-  run(qw( sudo make install ));
-  run(qw( sudo make install-binsymlinks ));
-  run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
-
-  system('/usr/cyrus/bin/cyr_info', 'version');
 }
 
 1;
