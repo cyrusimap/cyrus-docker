@@ -12,7 +12,7 @@ sub opt_spec {
   return (
     [ 'format=s', "which formatter to use; default: prettier",
                   { default => 'prettier' } ],
-    [ 'slow!',    "run slow tests", { default => 1 } ],
+    [ 'slow',     "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
   );
 }
@@ -44,6 +44,15 @@ sub execute ($self, $opt, $args) {
 
   system(qw(make -j 8));
   Process::Status->assert_ok('Cassandane make');
+
+  # The idea here is that if the user ran "cyd test Some::Test" then running
+  # "make syntax" could add a lot of overhead in syntax checking.  If they're
+  # testing *everything*, though, or "everything but three tests", then running
+  # a syntax check is a good idea.
+  unless (grep {; !/^!/ && !/^-/ } @$args) {
+    system(qw(make -j 8 syntax));
+    Process::Status->assert_ok('Cassandane make syntax');
+  }
 
   system(
     qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
