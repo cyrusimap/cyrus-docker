@@ -14,6 +14,8 @@ sub opt_spec {
                   { default => 'prettier' } ],
     [ 'slow',     "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
+    [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
+                  { default => 8 } ],
   );
 }
 
@@ -42,7 +44,7 @@ sub execute ($self, $opt, $args) {
     path('cassandane.ini')->spew(@lines);
   }
 
-  system(qw(make -j 8));
+  system(qw(make -j), $opt->jobs);
   Process::Status->assert_ok('Cassandane make');
 
   # The idea here is that if the user ran "cyd test Some::Test" then running
@@ -50,13 +52,13 @@ sub execute ($self, $opt, $args) {
   # testing *everything*, though, or "everything but three tests", then running
   # a syntax check is a good idea.
   unless (grep {; !/^!/ && !/^-/ } @$args) {
-    system(qw(make -j 8 syntax));
+    system(qw(make -j), $opt->jobs, qw(syntax));
     Process::Status->assert_ok('Cassandane make syntax');
   }
 
   system(
     qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
-    qw( ./testrunner.pl -j 8 -f ), $opt->format,
+    qw( ./testrunner.pl -j ), $opt->jobs, qw( -f ), $opt->format,
       ($opt->rerun  ? '--rerun' : ()),
       ($opt->slow   ? '--slow'  : ()),
     @$args,
