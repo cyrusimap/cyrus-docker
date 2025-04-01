@@ -41,7 +41,7 @@ sub execute ($self, $opt, $args) {
 
   $self->configure($opt) unless $opt->recompile;
 
-  my @jobs = ("-j", $opt->jobs);
+  my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
   run(qw( make lex-fix                  ), @jobs);
   run(qw( make                          ), @jobs);

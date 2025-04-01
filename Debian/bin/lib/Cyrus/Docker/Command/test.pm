@@ -44,7 +44,9 @@ sub execute ($self, $opt, $args) {
     path('cassandane.ini')->spew(@lines);
   }
 
-  system(qw(make -j), $opt->jobs);
+  my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
+
+  system(qw(make), @jobs);
   Process::Status->assert_ok('Cassandane make');
 
   # The idea here is that if the user ran "cyd test Some::Test" then running
@@ -52,13 +54,13 @@ sub execute ($self, $opt, $args) {
   # testing *everything*, though, or "everything but three tests", then running
   # a syntax check is a good idea.
   unless (grep {; !/^!/ && !/^-/ } @$args) {
-    system(qw(make -j), $opt->jobs, qw(syntax));
+    system(qw(make syntax), @jobs);
     Process::Status->assert_ok('Cassandane make syntax');
   }
 
   system(
     qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
-    qw( ./testrunner.pl -j ), $opt->jobs, qw( -f ), $opt->format,
+    qw( ./testrunner.pl ), @jobs, qw( -f ), $opt->format,
       ($opt->rerun  ? '--rerun' : ()),
       ($opt->slow   ? '--slow'  : ()),
     @$args,
