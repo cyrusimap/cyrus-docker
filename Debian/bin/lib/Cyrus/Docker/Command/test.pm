@@ -12,8 +12,10 @@ sub opt_spec {
   return (
     [ 'format=s', "which formatter to use; default: prettier",
                   { default => 'prettier' } ],
-    [ 'slow!',    "run slow tests", { default => 1 } ],
+    [ 'slow',     "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
+    [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
+                  { default => 8 } ],
   );
 }
 
@@ -42,12 +44,23 @@ sub execute ($self, $opt, $args) {
     path('cassandane.ini')->spew(@lines);
   }
 
-  system(qw(make -j 8));
+  my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
+
+  system(qw(make), @jobs);
   Process::Status->assert_ok('Cassandane make');
+
+  # The idea here is that if the user ran "cyd test Some::Test" then running
+  # "make syntax" could add a lot of overhead in syntax checking.  If they're
+  # testing *everything*, though, or "everything but three tests", then running
+  # a syntax check is a good idea.
+  unless (grep {; !/^!/ && !/^-/ } @$args) {
+    system(qw(make syntax), @jobs);
+    Process::Status->assert_ok('Cassandane make syntax');
+  }
 
   system(
     qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
-    qw( ./testrunner.pl -j 8 -f ), $opt->format,
+    qw( ./testrunner.pl ), @jobs, qw( -f ), $opt->format,
       ($opt->rerun  ? '--rerun' : ()),
       ($opt->slow   ? '--slow'  : ()),
     @$args,
