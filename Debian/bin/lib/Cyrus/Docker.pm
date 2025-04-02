@@ -18,8 +18,13 @@ sub repo_root ($self) {
 sub config ($self) {
   $self->{config} //= do {
     my $path = Path::Tiny::path('/etc/cyrus-docker.json');
-    $path->exists ? JSON::XS::decode_json($path->slurp)
-                  : {}
+    my $config = $path->exists ? JSON::XS::decode_json($path->slurp) : {};
+
+    if (defined $config->{default_jobs} && $config->{default_jobs} !~ /\A[0-9]+\z/) {
+      die "$path has a default_jobs option but it isn't an integer\n";
+    }
+
+    $config;
   };
 }
 
