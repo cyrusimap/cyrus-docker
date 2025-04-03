@@ -12,7 +12,7 @@ sub opt_spec {
   return (
     [ 'format=s', "which formatter to use; default: prettier",
                   { default => 'prettier' } ],
-    [ 'slow',     "run slow tests", { default => 0 } ],
+    [ 'slow!',    "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
     [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
                   { default => 8 } ],
