@@ -32,6 +32,8 @@ sub opt_spec {
       [ 'gcc' => 'gcc', ],
       [ 'clang' => 'clang', ],
     ] } ],
+    [ 'cflags=s' => 'additional flags to include in CFLAGS' ],
+    [ 'cxxflags=s' => 'additional flags to include in CXXFLAGS' ],
   );
 }
 
@@ -143,10 +145,13 @@ sub configure ($self, $opt) {
   my $libsdir = '/usr/local/cyruslibs';
   my $target  = '/usr/cyrus';
 
+  my $more_cflags = $opt->cflags // "";
+  my $more_cxxflags = $opt->cxxflags // "";
+
   local $ENV{LDFLAGS} = "-L$libsdir/lib/x86_64-linux-gnu -L$libsdir/lib -Wl,-rpath,$libsdir/lib/x86_64-linux-gnu -Wl,-rpath,$libsdir/lib";
   local $ENV{PKG_CONFIG_PATH} = "$libsdir/lib/x86_64-linux-gnu/pkgconfig:$libsdir/lib/pkgconfig:\$PKG_CONFIG_PATH";
-  local $ENV{CFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings";
-  local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror";
+  local $ENV{CFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings $more_cflags";
+  local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror $more_cxxflags";
   local $ENV{PATH} = "$libsdir/bin:$ENV{PATH}";
 
   run(qw( autoreconf -v -i ));
