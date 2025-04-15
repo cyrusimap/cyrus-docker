@@ -52,8 +52,11 @@ sub execute ($self, $opt, $args) {
   # The idea here is that if the user ran "cyd test Some::Test" then running
   # "make syntax" could add a lot of overhead in syntax checking.  If they're
   # testing *everything*, though, or "everything but three tests", then running
-  # a syntax check is a good idea.
-  unless (grep {; !/^!/ && !/^-/ } @$args) {
+  # a syntax check is a good idea.  The --rerun options is treated like a
+  # specific test selection, which is a bit of a gamble, but probably a good
+  # one.
+  my $selects_tests = $opt->rerun || grep {; !/^!/ && !/^-/ } @$args;
+  unless ($selects_tests) {
     system(qw(make syntax), @jobs);
     Process::Status->assert_ok('Cassandane make syntax');
   }
