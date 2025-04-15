@@ -10,8 +10,8 @@ sub abstract { 'test the cyrus-imapd repo with cassandane' }
 
 sub opt_spec {
   return (
-    [ 'format=s', "which formatter to use; default: prettier",
-                  { default => 'prettier' } ],
+    [ 'format=s', "which formatter to use; default: pretty",
+                  { default => 'pretty' } ],
     [ 'slow!',    "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
     [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
