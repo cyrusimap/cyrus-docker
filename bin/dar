@@ -235,6 +235,7 @@ END
       '--name', $name,
       '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
       ($opt_keep ? () : '--rm'),
+      '--cap-add=SYS_PTRACE',
       $image_specifier,
       qw( cyd idle )
     ],
