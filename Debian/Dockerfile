@@ -94,6 +94,7 @@ apt-get -y install --no-install-recommends \
     pkg-config \
     po-debconf \
     python3-docutils \
+    python3-myst-parser \
     python3-pygments \
     rsync \
     rsyslog \
