@@ -12084,6 +12084,24 @@ END
 
   Process::Status->assert_ok("❌ Fixing git permissions in container");
 
+  my $config_file = path('~/.cyrus-docker/config');
+  if (-e $config_file) {
+    run(
+      [
+        'docker', 'cp', '--quiet',
+        $config_file->absolute,
+        "$container_id:/etc/cyrus-docker.json",
+      ],
+      _emptyref(),
+      _emptyref(),
+    );
+
+    if ($?) {
+      warn "❗️ Couldn't copy config into container, " .
+        Process::Status->new($?)->as_string;
+    }
+  }
+
   return $class->_existing_container;
 }
 
