@@ -65,6 +65,8 @@ sub configure ($self, $opt) {
     die "git-version.sh can't decide what version this is; giving up!\n";
   }
 
+  my %configenv = ();
+
   my $with_sanitizer = $opt->sanitizer ? " with " . $opt->sanitizer : "";
 
   my $san_flags = q{};
@@ -85,7 +87,7 @@ sub configure ($self, $opt) {
       }
 
       unless ($dont_suppress) {
-        $ENV{LSAN_OPTIONS} = "$lsan_opts:suppressions=leaksanitizer.suppress";
+        $configenv{LSAN_OPTIONS} = "$lsan_opts:suppressions=leaksanitizer.suppress";
       }
 
       if (! $opt->compiler) {
@@ -101,7 +103,7 @@ sub configure ($self, $opt) {
     } elsif ($opt->sanitizer =~ /\Aubsan(_trap)?\z/) {
       $san_flags = '-fsanitize=undefined';
 
-      $ENV{UBSAN_OPTIONS} = "print_stacktrace=1:halt_on_error=1";
+      $configenv{UBSAN_OPTIONS} = "print_stacktrace=1:halt_on_error=1";
 
       if ($opt->sanitizer eq 'ubsan_trap') {
         $san_flags .= ' -fsanitize-undefined-trap-on-error';
@@ -114,9 +116,9 @@ sub configure ($self, $opt) {
   my $with_cc = "";
 
   if ($opt->compiler) {
-    $ENV{CC} = $opt->compiler;
+    $configenv{CC} = $opt->compiler;
 
-    $with_cc = " using $ENV{CC}";
+    $with_cc = " using $configenv{CC}";
   }
 
   say "building cyrusversion $version$with_cc$with_sanitizer";
@@ -148,19 +150,20 @@ sub configure ($self, $opt) {
   my $more_cflags = $opt->cflags // "";
   my $more_cxxflags = $opt->cxxflags // "";
 
-  local $ENV{LDFLAGS} = "-L$libsdir/lib/x86_64-linux-gnu -L$libsdir/lib -Wl,-rpath,$libsdir/lib/x86_64-linux-gnu -Wl,-rpath,$libsdir/lib";
-  local $ENV{PKG_CONFIG_PATH} = "$libsdir/lib/x86_64-linux-gnu/pkgconfig:$libsdir/lib/pkgconfig:\$PKG_CONFIG_PATH";
-  local $ENV{CFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings -Wformat=2 $more_cflags";
-  local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror $more_cxxflags";
-  local $ENV{PATH} = "$libsdir/bin:$ENV{PATH}";
+  $configenv{LDFLAGS} = "-L$libsdir/lib/x86_64-linux-gnu -L$libsdir/lib -Wl,-rpath,$libsdir/lib/x86_64-linux-gnu -Wl,-rpath,$libsdir/lib";
+  $configenv{PKG_CONFIG_PATH} = "$libsdir/lib/x86_64-linux-gnu/pkgconfig:$libsdir/lib/pkgconfig:\$PKG_CONFIG_PATH";
+  $configenv{CFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings -Wformat=2 $more_cflags";
+  $configenv{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror $more_cxxflags";
+  $configenv{PATH} = "$libsdir/bin:$ENV{PATH}";
+  $configenv{XAPIAN_CONFIG} = "$libsdir/bin/xapian-config-1.5";
 
   run(qw( autoreconf -v -i ));
 
   run(
     './configure',
+    map { "$_=\"$configenv{$_}\"" } keys(%configenv),
     "--prefix=$target",
     @configopts,
-    "XAPIAN_CONFIG=$libsdir/bin/xapian-config-1.5",
   );
 }
 
