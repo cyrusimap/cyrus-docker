@@ -12,6 +12,8 @@ sub opt_spec {
   return (
     [ 'format=s', "which formatter to use; default: pretty",
                   { default => 'pretty' } ],
+    [ 'ok!',      "include OK results in output (defaults on)", { default => 1 } ],
+    [],
     [ 'slow!',    "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
     [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
@@ -64,6 +66,7 @@ sub execute ($self, $opt, $args) {
   system(
     qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
     qw( ./testrunner.pl ), @jobs, qw( -f ), $opt->format,
+      ($opt-ok      ? ()        : '--no-ok'),
       ($opt->rerun  ? '--rerun' : ()),
       ($opt->slow   ? '--slow'  : ()),
     @$args,
