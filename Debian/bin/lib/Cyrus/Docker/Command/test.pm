@@ -66,7 +66,7 @@ sub execute ($self, $opt, $args) {
   system(
     qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
     qw( ./testrunner.pl ), @jobs, qw( -f ), $opt->format,
-      ($opt-ok      ? ()        : '--no-ok'),
+      ($opt->ok     ? ()        : '--no-ok'),
       ($opt->rerun  ? '--rerun' : ()),
       ($opt->slow   ? '--slow'  : ()),
     @$args,
