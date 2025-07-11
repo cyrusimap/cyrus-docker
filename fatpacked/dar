@@ -11874,7 +11874,7 @@ my $MENU = <<'END';
 dar: the cyrus-docker dev tool
 
 Run "dar COMMAND".  Here are some commands:
- • pull     - pull the latest docker container image
+ • pull     - pull the latest OCI container image
  • start    - start a container to build in the current dir
  • prune    - stop and destroy the container for this dir
  • help     - get more information about how to use dar

@@ -1,4 +1,4 @@
-name: Create and publish a Docker image
+name: Create and publish an OCI image
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
             type=raw,value=bookworm-dev${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'dev') }}
             type=raw,value=bookworm${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
-      - name: Build and push Docker image
+      - name: Build and push OCI image
         id: push
         uses: docker/build-push-action@v6
         with:

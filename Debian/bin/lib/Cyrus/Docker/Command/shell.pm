@@ -16,7 +16,7 @@ sub command_names ($self, @rest) {
 
 sub do_motd {
   my $menu = <<~'END';
-            /////  |||| Cyrus IMAP docker image
+            /////  |||| Cyrus IMAP OCI image
           /////    |||| Run cyrus-docker (or "cyd") as:
         /////      ||||
       /////        ||||  • cyd clone  - clone cyrus-imapd.git from GitHub
