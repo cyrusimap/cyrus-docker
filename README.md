@@ -1,11 +1,11 @@
-# Docker Images for Cyrus IMAP
+# OCI Images for Cyrus IMAP
 
 This repo contains a Dockerfile for building a container that has all the
 required libraries for building and testing Cyrus IMAP.  It is meant for use in
 Cyrus IMAP's automated test runs, and for testing changes while developing
 Cyrus.
 
-There are two ways to acquire the Docker images.
+There are two ways to acquire the OCI images.
 
 ## Build locally from a Dockerfile
 
@@ -14,7 +14,7 @@ specific to Debian distributions.  While we'd like to support multiple
 platforms in the future, we do not currently do so.
 
 The `Dockerfile` is in the `Debian` directory. To build the Debian
-based Docker image, run the following commands from the current
+based OCI image, run the following commands from the current
 directory:
 
 ```
@@ -22,7 +22,7 @@ $ cd Debian
 $ docker build -t <image-name> .
 ```
 
-where `<image-name>` could be anything you like. Because the current Docker
+where `<image-name>` could be anything you like. Because the current OCI
 image is based on [Debian
 "bookworm"](https://www.debian.org/releases/bookworm/), we would typically run
 it as:
