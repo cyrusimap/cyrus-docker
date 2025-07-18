@@ -63,6 +63,7 @@ apt-get -y install --no-install-recommends \
     default-libmysqlclient-dev \
     libnet-server-perl \
     libnews-nntpclient-perl \
+    libnghttp2-dev \
     libpath-tiny-perl \
     libpam0g-dev \
     libplack-perl \

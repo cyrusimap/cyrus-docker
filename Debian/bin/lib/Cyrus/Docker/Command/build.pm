@@ -138,6 +138,7 @@ sub configure ($self, $opt) {
     --enable-xapian
     --enable-jmap
     --with-ldap=/usr
+    --with-nghttp2
   );
 
   push @configopts, '--with-sphinx-build=no' unless $opt->with_sphinx;
