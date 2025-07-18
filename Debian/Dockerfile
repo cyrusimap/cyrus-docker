@@ -215,7 +215,8 @@ EOF
 # This determines what commit (sha1) we use to build Dovecot.  We don't have
 # much of a policy about testing or changing this, but: before making changes
 # to the Dockerfile or the built image, make sure they don't break things!
-ARG DOVECOT_COMMIT=c6829c3d67fcbc20aa4bb7fb6daed0060e9f6341
+ARG DOVECOT_COMMIT=16c850b8d7fa781099315b6a7cc68e6fb5cdeb20
+ARG IMAPTEST_COMMIT=0c24edb324f10a08223097b5cda145fa005c4026
 
 RUN <<EOF
 # clone and build dovecot.git
@@ -228,7 +229,6 @@ mkdir dovecot
 cd dovecot
 git init
 git remote add github https://github.com/dovecot/core.git
-# NOTE: change this only after testing
 git fetch --depth 1 github $DOVECOT_COMMIT
 git checkout FETCH_HEAD
 ./autogen.sh
@@ -242,10 +242,13 @@ EOF
 RUN <<EOF
 # clone and build imaptest.git
 set -e
-git clone --depth 1 --shallow-submodules -b cyrus https://github.com/cyrusimap/imaptest.git
+mkdir imaptest
 cd imaptest
-# RUN git checkout origin/cyrus
-sh autogen.sh
+git init
+git remote add github https://github.com/dovecot/imaptest.git
+git fetch --depth 1 github $IMAPTEST_COMMIT
+git checkout FETCH_HEAD
+./autogen.sh
 ./configure --enable-silent-rules
 make -j 8
 # need to run it once as root to link up libs
