@@ -137,7 +137,7 @@ sub configure ($self, $opt) {
     --enable-unit-tests
     --enable-xapian
     --enable-jmap
-    --with-ldap=/usr"
+    --with-ldap=/usr
   );
 
   push @configopts, '--with-sphinx-build=no' unless $opt->with_sphinx;
