@@ -38,13 +38,12 @@ sub opt_spec {
 }
 
 sub execute ($self, $opt, $args) {
-  my $root = $self->app->repo_root;
-  chdir $root or die "can't chdir to $root: $!";
-
   $self->configure($opt) unless $opt->recompile;
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
+  my $build_dir = $self->app->build_dir;
+  chdir $build_dir or die "can't chdir to $build_dir: $!";
   run(qw( make lex-fix                  ), @jobs);
   run(qw( make                          ), @jobs);
   run(qw( make check                    ), @jobs) if $opt->cunit;
@@ -56,6 +55,9 @@ sub execute ($self, $opt, $args) {
 }
 
 sub configure ($self, $opt) {
+  my $root = $self->app->repo_root;
+  chdir $root or die "can't chdir to $root: $!";
+
   my $version = `./tools/git-version.sh`;
   Process::Status->assert_ok("determining git version");
 
@@ -145,6 +147,7 @@ sub configure ($self, $opt) {
 
   my $libsdir = '/usr/local/cyruslibs';
   my $target  = '/usr/cyrus';
+  my $build_dir = $self->app->build_dir;
 
   my $more_cflags = $opt->cflags // "";
   my $more_cxxflags = $opt->cxxflags // "";
@@ -157,8 +160,9 @@ sub configure ($self, $opt) {
 
   run(qw( autoreconf -v -i ));
 
+  chdir $build_dir or die "can't chdir to $build_dir: $!";
   run(
-    './configure',
+    "$root/configure",
     "--prefix=$target",
     @configopts,
     "XAPIAN_CONFIG=$libsdir/bin/xapian-config-1.5",
