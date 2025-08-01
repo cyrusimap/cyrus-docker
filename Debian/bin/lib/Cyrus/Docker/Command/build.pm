@@ -38,9 +38,6 @@ sub opt_spec {
 }
 
 sub execute ($self, $opt, $args) {
-  my $root = $self->app->repo_root;
-  chdir $root or die "can't chdir to $root: $!";
-
   $self->configure($opt) unless $opt->recompile;
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
@@ -57,8 +54,10 @@ sub execute ($self, $opt, $args) {
   system('/usr/cyrus/bin/cyr_info', 'version');
 }
 
-
 sub configure ($self, $opt) {
+  my $root = $self->app->repo_root;
+  chdir $root or die "can't chdir to $root: $!";
+
   my $version = `./tools/git-version.sh`;
   Process::Status->assert_ok("determining git version");
 

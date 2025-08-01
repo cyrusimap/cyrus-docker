@@ -18,7 +18,7 @@ sub repo_root ($self) {
 sub build_dir ($self) {
   $self->{build_dir} //= do {
     my $path = '/usr/cyrus/build';
-    Path::Tiny::path($path);
+    Path::Tiny::path($path)->mkdir;
   };
 }
 
