@@ -11938,8 +11938,23 @@ sub _emptyref {
   return \$str;
 }
 
-sub do_help {
-  print $HELP;
+sub do_help ($class, $args) {
+  unless (@$args) {
+    print $HELP;
+    return;
+  }
+
+  my $container = $class->_existing_container;
+
+  unless ($container && $container->{State} eq 'running') {
+    die <<~'END'
+    You can only get more specific help if you have a running container.
+    You'll want to run "dar start", or just "dar help" for basic help.
+    END
+  }
+
+  $class->do_run([ 'cyd', 'help', @$args ]);
+
   return;
 }
 
