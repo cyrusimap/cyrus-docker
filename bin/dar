@@ -33,6 +33,7 @@ use Digest::SHA qw(sha1_hex);
 use Getopt::Long ();
 use JSON::PP;
 use Term::ANSIColor qw(colored);
+use Time::HiRes ();
 
 # CPAN
 use IPC::Run qw(run);
@@ -331,9 +332,14 @@ sub do_prune ($class, $args) {
 
   Process::Status->assert_ok("❌ Stopping existing container");
 
-  say "✅ Container stopped.";
-
-  unless ($autoremove) {
+  if ($autoremove) {
+    say "✅ Container stopped, now waiting for removal...";
+    while (1) {
+      run([ qw(docker inspect), $container->{ID} ], _emptyref(), _emptyref(), _emptyref());
+      last if $? != 0;
+      Time::HiRes::sleep(0.25);
+    }
+  } else {
     run([ qw( docker container rm ), $container->{ID} ]);
     Process::Status->assert_ok("❌ Removing stopped container");
   }
