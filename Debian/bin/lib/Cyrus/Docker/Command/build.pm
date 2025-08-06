@@ -23,11 +23,9 @@ sub opt_spec {
     [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
                      { default => 8 },
     ],
-    [ 'sanitizer' => hidden => { one_of => [
-      [ 'asan'  => 'build with AddressSanitizer' ],
-      [ 'ubsan' => 'build with UBSan' ],
-      [ 'ubsan-trap' => 'build with UBSan and trap on error' ],
-    ] } ],
+    [ 'asan'  => 'build with AddressSanitizer' ],
+    [ 'ubsan' => 'build with UBSan' ],
+    [ 'ubsan-trap' => 'build with UBSan and trap on error' ],
     [ 'compiler' => hidden => { one_of => [
       [ 'gcc' => 'gcc', ],
       [ 'clang' => 'clang', ],
@@ -65,49 +63,48 @@ sub configure ($self, $opt) {
     die "git-version.sh can't decide what version this is; giving up!\n";
   }
 
-  my $with_sanitizer = $opt->sanitizer ? " with " . $opt->sanitizer : "";
+  if ($opt->ubsan && $opt->ubsan_trap) {
+    die "Can't build with both --ubsan and --ubsan-trap!\n";
+  }
 
   my $san_flags = q{};
 
-  if ($opt->sanitizer) {
-    if ($opt->sanitizer eq 'asan') {
-      $san_flags = '-fsanitize=address';
+  if ($opt->asan) {
+    $san_flags .= ' -fsanitize=address';
 
-      my $lsan_opts = $ENV{LSAN_OPTIONS} || "";
-      my $dont_suppress;
+    my $lsan_opts = $ENV{LSAN_OPTIONS} || "";
+    my $dont_suppress;
 
-      if ($lsan_opts) {
-        my %opts = map { split '=', $_ } split(':', $lsan_opts);
-        if ($opts{supressions} && $opts{supressions} ne "cunit/leaksanitizer.suppress") {
-          warn "Warning! LSAN_OPTIONS already defines a suppressions file so ours will not be used. You may see spurious failures...\n";
-          $dont_suppress = 1;
-        }
+    if ($lsan_opts) {
+      my %opts = map { split '=', $_ } split(':', $lsan_opts);
+      if ($opts{supressions} && $opts{supressions} ne "cunit/leaksanitizer.suppress") {
+        warn "Warning! LSAN_OPTIONS already defines a suppressions file so ours will not be used. You may see spurious failures...\n";
+        $dont_suppress = 1;
       }
+    }
 
-      unless ($dont_suppress) {
-        $ENV{LSAN_OPTIONS} = "$lsan_opts:suppressions=leaksanitizer.suppress";
-      }
+    unless ($dont_suppress) {
+      $ENV{LSAN_OPTIONS} = "$lsan_opts:suppressions=leaksanitizer.suppress";
+    }
 
-      if (! $opt->compiler) {
-        warn colored(['red'], "If using gcc you may need ASAN_OPTIONS=verify_asan_link_order=0 when running cassandane tests.") . "\n";
-        warn colored(['red'], "Alternatively, use 'cyd build --asan --gcc' and I'll configure the build appropriately") . "\n";
+    if (! $opt->compiler) {
+      warn colored(['red'], "If using gcc you may need ASAN_OPTIONS=verify_asan_link_order=0 when running cassandane tests.") . "\n";
+      warn colored(['red'], "Alternatively, use 'cyd build --asan --gcc' and I'll configure the build appropriately") . "\n";
 
-      } elsif ($opt->compiler eq 'gcc') {
-        # As of at least gcc 12 we need to statically link libasan or cass
-        # tests fail with "ASan runtime does not come first..." errors
-        $san_flags .= ' -static-libasan';
-      }
+    } elsif ($opt->compiler eq 'gcc') {
+      # As of at least gcc 12 we need to statically link libasan or cass
+      # tests fail with "ASan runtime does not come first..." errors
+      $san_flags .= ' -static-libasan';
+    }
+  }
 
-    } elsif ($opt->sanitizer =~ /\Aubsan(_trap)?\z/) {
-      $san_flags = '-fsanitize=undefined';
+  if ($opt->ubsan || $opt->ubsan_trap) {
+    $san_flags .= ' -fsanitize=undefined';
 
-      $ENV{UBSAN_OPTIONS} = "print_stacktrace=1:halt_on_error=1";
+    $ENV{UBSAN_OPTIONS} = "print_stacktrace=1:halt_on_error=1";
 
-      if ($opt->sanitizer eq 'ubsan_trap') {
-        $san_flags .= ' -fsanitize-undefined-trap-on-error';
-      }
-    } else {
-      die "Unknown sanitizer mode '" . $opt->sanitizer . "'?!\n";
+    if ($opt->ubsan_trap) {
+      $san_flags .= ' -fsanitize-undefined-trap-on-error';
     }
   }
 
@@ -118,6 +115,8 @@ sub configure ($self, $opt) {
 
     $with_cc = " using $ENV{CC}";
   }
+
+  my $with_sanitizer = $san_flags ? " with$san_flags" : "";
 
   say "building cyrusversion $version$with_cc$with_sanitizer";
 
