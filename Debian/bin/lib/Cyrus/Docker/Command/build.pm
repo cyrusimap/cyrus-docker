@@ -16,7 +16,7 @@ sub abstract { 'build a configured cyrus-imapd' }
 
 sub opt_spec {
   return (
-    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
+    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make',
                      { default => 8 },
     ],
   );

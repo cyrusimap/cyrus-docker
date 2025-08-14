@@ -25,7 +25,7 @@ sub opt_spec {
       [ 'gcc' => 'gcc', ],
       [ 'clang' => 'clang', ],
     ] } ],
-    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
+    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make',
                      { default => 8 },
     ],
   );
