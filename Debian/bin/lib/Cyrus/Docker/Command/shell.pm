@@ -20,9 +20,9 @@ sub do_motd {
           /////    |||| Run cyrus-docker (or "cyd") as:
         /////      ||||
       /////        ||||  • cyd clone  - clone cyrus-imapd.git from GitHub
-    /////          ||||  • cyd build  - build your checked out cyrus-imapd
+    /////          ||||  • cyd prep   - configure, build, check, and install
     \\\\\          ||||  • cyd test   - run the cyrus-imapd test suite
-      \\\\\        ||||  • cyd smoke  - check out, build and test
+      \\\\\        ||||  • cyd smoke  - clone, prep, and test
         \\\\\      ||||
           \\\\\    ||||  • cyd shell  - run a shell in the container
             \\\\\  ||||
