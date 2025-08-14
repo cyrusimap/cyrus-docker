@@ -16,6 +16,7 @@ sub abstract { 'build a configured cyrus-imapd' }
 
 sub opt_spec {
   return (
+    [ 'with-sphinx|s', 'enable sphinx docs' ],
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -37,11 +38,12 @@ sub execute ($self, $opt, $args) {
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
-  my @sanitizer = $opt->sanitizer ? ('--' . $opt->sanitizer) : ();
-  my @compiler  = $opt->compiler  ? ('--' . $opt->compiler ) : ();
+  my @sphinx    = $opt->with_sphinx ? ('--with-sphinx')        : ();
+  my @sanitizer = $opt->sanitizer   ? ('--' . $opt->sanitizer) : ();
+  my @compiler  = $opt->compiler    ? ('--' . $opt->compiler ) : ();
 
   my @to_run = (
-    [ 'Cyrus::Docker::Command::configure', (@sanitizer, @compiler) ],
+    [ 'Cyrus::Docker::Command::configure', (@sphinx, @sanitizer, @compiler) ],
     [ 'Cyrus::Docker::Command::build',   (@jobs) ],
     [ 'Cyrus::Docker::Command::check',   (@jobs) ],
     [ 'Cyrus::Docker::Command::install', (@jobs) ],
