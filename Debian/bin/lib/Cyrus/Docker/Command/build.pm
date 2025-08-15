@@ -49,6 +49,9 @@ sub execute ($self, $opt, $args) {
   run(qw( make check                    ), @jobs) if $opt->cunit;
   run(qw( sudo make install             ), @jobs);
   run(qw( sudo make install-binsymlinks ), @jobs);
+
+  my $root = $self->app->repo_root;
+  chdir $root or die "can't chdir to $root: $!";
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
 
   system('/usr/cyrus/bin/cyr_info', 'version');
