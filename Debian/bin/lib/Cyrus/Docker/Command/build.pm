@@ -3,6 +3,7 @@ use v5.36.0;
 package Cyrus::Docker::Command::build;
 use Cyrus::Docker -command;
 
+use File::Spec;
 use Process::Status;
 use Term::ANSIColor qw(colored);
 
@@ -164,8 +165,9 @@ sub configure ($self, $opt) {
   run(qw( autoreconf -v -i ));
 
   chdir $build_dir or die "can't chdir to $build_dir: $!";
+  my $relcfg = File::Spec->abs2rel("$root/configure", $build_dir);
   run(
-    "$root/configure",
+    $relcfg,
     "--prefix=$target",
     @configopts,
     "XAPIAN_CONFIG=$libsdir/bin/xapian-config-1.5",
