@@ -10,7 +10,7 @@ sub abstract { 'sleep forever, to keep a container running' }
 
 sub execute ($self, $opt, $args) {
   my $motd = <<~'END';
-            /////  |||| Cyrus IMAP docker image
+            /////  |||| Cyrus IMAP OCI image
           /////    |||| IDLE mode (not to be confused with IMAP IDLE)
         /////      ||||
       /////        |||| If you're seeing this, that's weird.
