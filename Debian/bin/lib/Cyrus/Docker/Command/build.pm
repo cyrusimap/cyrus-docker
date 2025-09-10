@@ -70,8 +70,10 @@ sub configure ($self, $opt) {
   my $san_flags = q{};
 
   if ($opt->sanitizer) {
+    $san_flags = '-fno-omit-frame-pointer';
+
     if ($opt->sanitizer eq 'asan') {
-      $san_flags = '-fsanitize=address';
+      $san_flags .= ' -fsanitize=address';
 
       my $lsan_opts = $ENV{LSAN_OPTIONS} || "";
       my $dont_suppress;
@@ -99,7 +101,7 @@ sub configure ($self, $opt) {
       }
 
     } elsif ($opt->sanitizer =~ /\Aubsan(_trap)?\z/) {
-      $san_flags = '-fsanitize=undefined';
+      $san_flags .= ' -fsanitize=undefined';
 
       $ENV{UBSAN_OPTIONS} = "print_stacktrace=1:halt_on_error=1";
 
