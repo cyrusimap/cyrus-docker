@@ -17,6 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ "", "-arm" ]
+        debian: [ bookworm, trixie ]
     runs-on: ubuntu-24.04${{ matrix.platform }}
 
     permissions:
@@ -46,14 +47,15 @@ jobs:
           tags: |
             type=schedule,enable=${{ matrix.platform == '' }}
             type=ref,event=branch,enable=${{ matrix.platform == '' }}
-            type=raw,value=bookworm-dev${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'dev') }}
-            type=raw,value=bookworm${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
+            type=raw,value=${{ matrix.debian }}-dev${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'dev') }}
+            type=raw,value=${{ matrix.debian }}${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@v6
         with:
           context: Debian
+          build-args: DEBIAN_VERSION=${{ matrix.debian }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
