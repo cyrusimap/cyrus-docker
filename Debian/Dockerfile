@@ -68,6 +68,7 @@ apt-get -y install --no-install-recommends \
     libpam0g-dev \
     libplack-perl \
     libsasl2-dev \
+    libsasl2-modules \
     libsnmp-dev \
     libsqlite3-dev \
     libssl-dev \
