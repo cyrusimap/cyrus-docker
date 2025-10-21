@@ -45,7 +45,6 @@ jobs:
           labels: |
             org.cyrusimap.cyrus-docker.built-from=${{ github.sha }}
           tags: |
-            type=schedule,enable=${{ matrix.platform == '' }}
             type=ref,event=branch,enable=${{ matrix.platform == '' }}
             type=raw,value=${{ matrix.debian }}-dev${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'dev') }}
             type=raw,value=${{ matrix.debian }}${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
