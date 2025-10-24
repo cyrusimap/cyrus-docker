@@ -225,7 +225,7 @@ RUN <<EOF
 # This one is weird.  We want a specific commit, just for the sake of pinning
 # to known-good.  We install so that imaptest (below) can rely on the installed
 # Dovecot even after we remove the source.  We remove the source because it's a
-# whole lot of bytes that we don't really need to ship in the Docker image.
+# whole lot of bytes that we don't really need to ship in the OCI image.
 set -e
 mkdir dovecot
 cd dovecot
