@@ -1,0 +1,27 @@
+name: Clean up old GHCR images
+
+on:
+  workflow_dispatch: {}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  cleanup-old-containers:
+    runs-on: ubuntu-24.04${{ matrix.platform }}
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Destroy untagged images
+        uses: quartx-analytics/ghcr-cleaner@v1
+        with:
+          owner-type: org
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository_owner: ${{ github.repository_owner }}
+          delete-untagged: true
