@@ -125,7 +125,6 @@ sub configure ($self, $opt) {
 
   my @configopts = qw(
     --enable-autocreate
-    --enable-backup
     --enable-calalarmd
     --enable-gssapi
     --enable-http
