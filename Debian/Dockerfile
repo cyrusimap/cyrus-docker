@@ -27,6 +27,7 @@ apt-get -y install --no-install-recommends \
     doxygen \
     flex \
     g++ \
+    gdb \
     git \
     gperf \
     graphviz \
@@ -91,12 +92,14 @@ apt-get -y install --no-install-recommends \
     libzephyr-dev \
     llvm \
     lsb-base \
+    nano \
     net-tools \
     perl \
     pkg-config \
     po-debconf \
     python3-docutils \
     python3-pygments \
+    ripgrep \
     rsync \
     rsyslog \
     sudo \
