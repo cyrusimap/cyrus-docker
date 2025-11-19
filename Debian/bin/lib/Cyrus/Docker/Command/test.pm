@@ -16,6 +16,7 @@ sub opt_spec {
     [],
     [ 'slow!',    "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
+    [ 'valgrind', "run with valgrind" ],
     [ 'verbose|v+', "increase verbosity", { default => 0 } ],
     [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
                   { default => 8 } ],
@@ -70,6 +71,7 @@ sub execute ($self, $opt, $args) {
       ($opt->ok     ? ()        : '--no-ok'),
       ($opt->rerun  ? '--rerun' : ()),
       ($opt->slow   ? '--slow'  : ()),
+      ($opt->valgrind ? '--valgrind' : ()),
       (('-v') x $opt->verbose),
     @$args,
   );
