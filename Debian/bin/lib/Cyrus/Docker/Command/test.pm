@@ -16,7 +16,7 @@ sub opt_spec {
     [],
     [ 'slow!',    "run slow tests", { default => 0 } ],
     [ 'rerun',    "only run previously-failed tests" ],
-    [ 'verbose|v+', "increase verbosity" ],
+    [ 'verbose|v+', "increase verbosity", { default => 0 } ],
     [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
                   { default => 8 } ],
   );
