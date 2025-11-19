@@ -183,6 +183,7 @@ RUN <<EOF
 set -e
 $CPANM \
   App::Cmd \
+  Archive::Tar::Stream \
   Convert::Base64 \
   IO::File::fcntl \
   Mail::IMAPTalk \
