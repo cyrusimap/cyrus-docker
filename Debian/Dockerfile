@@ -19,6 +19,7 @@ apt-get -y install --no-install-recommends \
     bison \
     build-essential \
     check \
+    clamav-freshclam \
     clang \
     cmake \
     comerr-dev \
@@ -39,6 +40,7 @@ apt-get -y install --no-install-recommends \
     libanyevent-perl \
     libbsd-dev \
     libbsd-resource-perl \
+    libclamav-dev \
     libclang-rt-dev \
     libcld2-dev \
     libclone-perl \
@@ -163,6 +165,11 @@ groupadd -r saslauth
 useradd -c "Cyrus IMAP Server" -d /var/lib/imap -g mail -G saslauth -s /bin/bash -r cyrus
 
 git config --global http.sslverify false
+
+# Initialise (or update) ClamAV signature database
+# We only need the rule for the EICAR test pattern, which seems to be in
+# the 'bytecode' database, so keep things fast by only fetching that one.
+freshclam --update-db=bytecode
 EOF
 
 WORKDIR /srv
