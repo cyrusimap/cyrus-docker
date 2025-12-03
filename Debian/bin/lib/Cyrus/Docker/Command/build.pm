@@ -140,6 +140,7 @@ sub configure ($self, $opt) {
     --enable-jmap
     --with-ldap=/usr
     --with-nghttp2
+    --with-sqlite=yes
   );
 
   push @configopts, '--with-sphinx-build=no' unless $opt->with_sphinx;
