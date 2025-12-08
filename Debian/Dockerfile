@@ -78,7 +78,6 @@ apt-get -y install --no-install-recommends \
     libstring-crc32-perl \
     libtest-deep-perl \
     libtest-most-perl \
-    libtest-unit-perl \
     libtest-tcp-perl \
     libtool \
     libunix-syslog-perl \
@@ -200,6 +199,7 @@ $CPANM \
   Net::CalDAVTalk \
   Net::CardDAVTalk \
   Process::Status \
+  Test::Unit~0.29 \
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
