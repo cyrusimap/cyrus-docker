@@ -195,6 +195,7 @@ $CPANM \
   Archive::Tar::Stream \
   Convert::Base64 \
   IO::File::fcntl \
+  JMAP::Tester~0.105 \
   Mail::IMAPTalk \
   Net::CalDAVTalk \
   Net::CardDAVTalk \
