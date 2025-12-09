@@ -200,7 +200,7 @@ $CPANM \
   Net::CalDAVTalk \
   Net::CardDAVTalk \
   Process::Status \
-  Test::Unit~0.29 \
+  Test::Unit~0.29
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
