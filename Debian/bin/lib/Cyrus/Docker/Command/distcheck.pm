@@ -3,6 +3,8 @@ use v5.36.0;
 package Cyrus::Docker::Command::distcheck;
 use Cyrus::Docker -command;
 
+use File::Spec ();
+use File::Temp qw(tempdir);
 use Process::Status;
 use Term::ANSIColor qw(colored);
 
@@ -16,9 +18,10 @@ sub abstract { 'do a distcheck against cyrus-imapd' }
 
 sub opt_spec {
   return (
-    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make',
-                     { default => 8 },
+    [ 'jobs|j=i', 'specify number of parallel jobs (default: 8) to run for make',
+                  { default => 8 },
     ],
+    [ 'brief',    'only make distcheck, do not test the tarball' ],
   );
 }
 
@@ -42,7 +45,45 @@ sub execute ($self, $opt, $args) {
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
-  run(qw( make distcheck                ), @jobs);
+  run(qw( make distcheck ), @jobs);
+
+  if ($opt->brief) {
+    return;
+  }
+
+  my $commit = `git rev-parse HEAD`;
+  Process::Status->assert_ok('checking current commit');
+
+  chomp $commit;
+  $commit = substr $commit, 0, 6;
+
+  my ($tarball) = glob("cyrus-imapd-*-g${commit}*.tar.gz");
+
+  unless ($tarball) {
+    die "Can't find the tarball we should've just built!\n";
+  }
+
+  my $full_tarball_path = File::Spec->catfile($root, $tarball);
+
+  my $tempdir = tempdir(CLEANUP => 1);
+  chdir $tempdir or die "can't chdir to $tempdir: $!";
+  chmod 0755, $tempdir or die "can't chmod 0755 $tempdir: $!";
+
+  run(qw( tar zxvf ), $full_tarball_path );
+
+  my $extracted = File::Spec->catfile($tempdir, $tarball =~ s/\.tar\.gz$//r);
+  chdir $extracted or die "can't chdir to $extracted: $!";
+
+  local $ENV{CYRUS_CLONE_ROOT} = $extracted;
+  run(qw( cyd build ));
+
+  # This is a bit iffy, but gets the job done for now.
+  local $ENV{CASSINI_FILENAME} = "$extracted/cassandane/cassandane.ini";
+
+  run(qw( cyd test ));
+
+  # chdir back to original root so that tempdir can be cleaned up
+  chdir $root or die "can't chdir to $root: $!";
 }
 
 1;
