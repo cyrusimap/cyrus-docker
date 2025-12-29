@@ -21,6 +21,7 @@ sub opt_spec {
     [ 'jobs|j=i', 'specify number of parallel jobs (default: 8) to run for make',
                   { default => 8 },
     ],
+    [ 'dirty',    'do a dirty dist: the git repo MUST be dirty; otherwise, MUST NOT' ],
     [ 'brief',    'only make distcheck, do not test the tarball' ],
   );
 }
@@ -29,7 +30,14 @@ sub execute ($self, $opt, $args) {
   my $root = $self->app->repo_root;
   chdir $root or die "can't chdir to $root: $!";
 
-  # Assert that we're git clean?
+  my @lines = `git status --porcelain | grep -v '?'`;
+  if (@lines && !$opt->dirty) {
+    die "Refusing to distcheck in dirty git state without --dirty.\n";
+  }
+
+  if (!@lines && $opt->dirty) {
+    die "Refusing to distcheck --dirty in clean git state.\n";
+  }
 
   $ENV{PKG_CONFIG_PATH} = join q{:}, (
     '/usr/local/cyruslibs/lib/x86_64-linux-gnu/pkgconfig',
@@ -57,7 +65,9 @@ sub execute ($self, $opt, $args) {
   chomp $commit;
   $commit = substr $commit, 0, 6;
 
-  my ($tarball) = glob("cyrus-imapd-*-g${commit}*.tar.gz");
+  my $dirty = $opt->dirty ? '-dirty' : '';
+
+  my ($tarball) = glob("cyrus-imapd-*-g${commit}*${dirty}.tar.gz");
 
   unless ($tarball) {
     die "Can't find the tarball we should've just built!\n";
