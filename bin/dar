@@ -57,20 +57,21 @@ my $MENU = <<'END';
 dar: the cyrus-docker dev tool
 
 Run "dar COMMAND".  Here are some commands:
- • pull     - pull the latest OCI container image
- • start    - start a container to build in the current dir
- • prune    - stop and destroy the container for this dir
- • help     - get more information about how to use dar
- • run      - run the given command in the container
- • cyd      - a shortcut for "dar run cyd ..."
+ • pull      - pull the latest OCI container image
+ • start     - start a container to build in the current dir
+ • prune     - stop and destroy the container for this dir
+ • help      - get more information about how to use dar
+ • run       - run the given command in the container
+ • cyd       - a shortcut for "dar run cyd ..."
 
 And these commands all run "dar cyd CMD" in the container:
- • build    - configure and compile Cyrus
- • clean    - "make clean" the repo
- • makedocs - build the html version of the docs
- • shell    - run a shell
- • smoke    - sugar for "build then test"
- • test     - run the Cassandane test suite
+ • build     - configure and compile Cyrus
+ • clean     - "make clean" the repo
+ • distcheck - build and test a Cyrus IMAP distribution
+ • makedocs  - build the html version of the docs
+ • shell     - run a shell
+ • smoke     - sugar for "build then test"
+ • test      - run the Cassandane test suite
 END
 
 $MENU =~ s{([/|\\]+)}{colored(['bright_blue'], "$1")}ge;
@@ -346,7 +347,7 @@ sub do_prune ($class, $args) {
 }
 
 BEGIN {
-  for my $cyd_cmd (qw( build clean makedocs shell smoke test )) {
+  for my $cyd_cmd (qw( build clean distcheck makedocs shell smoke test )) {
     my $code = sub ($class, $args) {
       $class->do_run([ 'cyd', $cyd_cmd, @$args ]);
     };
