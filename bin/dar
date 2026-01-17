@@ -40,6 +40,8 @@ use IPC::Run qw(run);
 use Path::Tiny 0.125;
 use Process::Status;
 
+my $IS_TTY = -t *STDIN;
+
 my $MINIMUM_IMAGE_VERSION = 1;
 
 binmode *STDOUT, ':encoding(utf-8)';
@@ -384,8 +386,10 @@ sub do_run ($class, $args) {
 
   say "⏳ Executing command in container $container->{ID}...";
 
+  my @switches = $IS_TTY ? ('--tty', '--interactive') : ();
+
   exec(
-    qw( docker exec --workdir /srv/cyrus-imapd -ti ),
+    qw( docker exec --workdir /srv/cyrus-imapd ), @switches,
     $container->{ID},
     @$args,
   );
