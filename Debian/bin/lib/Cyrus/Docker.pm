@@ -15,6 +15,13 @@ sub repo_root ($self) {
   };
 }
 
+sub build_dir ($self) {
+  $self->{build_dir} //= do {
+    my $path = '/usr/cyrus/build';
+    Path::Tiny::path($path)->mkdir;
+  };
+}
+
 sub config ($self) {
   $self->{config} //= do {
     my $path = Path::Tiny::path('/etc/cyrus-docker.json');
