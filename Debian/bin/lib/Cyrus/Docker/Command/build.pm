@@ -18,6 +18,7 @@ sub opt_spec {
   return (
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
     [ 'cunit!', "run make check [-n to disable]", { default => 1 } ],
+    [ 'cunitfast|f', "run make check-fast instead of make check", { implies => { cunit => 0 } } ],
     [ 'n', "hidden", { implies => { cunit => 0 } } ],
     [ 'with-sphinx|s', 'enable sphinx docs' ],
     [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
@@ -47,7 +48,8 @@ sub execute ($self, $opt, $args) {
 
   run(qw( make lex-fix                  ), @jobs);
   run(qw( make                          ), @jobs);
-  run(qw( make check                    ), @jobs) if $opt->cunit;
+  run(qw( make check                    ), @jobs)  if $opt->cunit;
+  run(qw( make check-fast               ), @jobs ) if $opt->cunitfast;
   run(qw( sudo make install             ), @jobs);
   run(qw( sudo make install-binsymlinks ), @jobs);
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
