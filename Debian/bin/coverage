@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e -x
+set -o pipefail
+
+HTML_DIR="${1:-coverage}"
+TITLE="${2:-cyrus-imapd}"
+
+INFO_FILE="coverage.info"
+
+# create a .info file from the .gcda files
+# Sadly with v2.4 seems that we need to turn of consistency checks
+# and then also run genhtml with *more* "ignore these errors" flags.
+lcov --no-external --branch-coverage -rc check_data_consistency=0 --capture --directory . -o $INFO_FILE
+
+# generate html
+HEADER_TITLE=$(git show --oneline --no-patch)
+genhtml --branch-coverage --ignore-errors unmapped,inconsistent,corrupt,range \
+  --title="$TITLE" --header-title="$HEADER_TITLE" -o $HTML_DIR $INFO_FILE
