@@ -14,6 +14,10 @@ my sub run (@args) {
 
 sub abstract { 'configure, build, and install cyrus-imapd' }
 
+# gcov isn't strictly a sanitizer, but it's easier to implement it as one
+# (and it doesn't make sense to run coverage on a sanitizer build, even if the
+# compiler would let us)
+
 sub opt_spec {
   return (
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
@@ -27,6 +31,7 @@ sub opt_spec {
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
       [ 'ubsan-trap' => 'build with UBSan and trap on error' ],
+      [ 'gcov'  => 'build with gcov' ],
     ] } ],
     [ 'compiler' => hidden => { one_of => [
       [ 'gcc' => 'gcc', ],
@@ -130,6 +135,12 @@ sub configure ($self, $opt) {
       if ($opt->sanitizer eq 'ubsan_trap') {
         $san_flags .= ' -fsanitize-undefined-trap-on-error';
       }
+    } elsif ($opt->sanitizer eq 'gcov') {
+      # lcov was fine without this, but gcovr needs it
+      # Leaving it in, as other alternative tools we trial might want it too:
+      $san_flags .= " -fprofile-abs-path";
+
+      push @configopts, '--enable-coverage';
     } else {
       die "Unknown sanitizer mode '" . $opt->sanitizer . "'?!\n";
     }
