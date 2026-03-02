@@ -65,6 +65,28 @@ sub configure ($self, $opt) {
     die "git-version.sh can't decide what version this is; giving up!\n";
   }
 
+  my @configopts = qw(
+    --enable-autocreate
+    --enable-calalarmd
+    --enable-gssapi
+    --enable-http
+    --enable-idled
+    --enable-murder
+    --enable-nntp
+    --enable-replication
+    --enable-shared
+    --enable-silent-rules
+    --enable-debug-slowio
+    --enable-unit-tests
+    --enable-xapian
+    --enable-jmap
+    --with-ldap=/usr
+    --with-nghttp2
+    --with-sqlite=yes
+  );
+
+  push @configopts, '--with-sphinx-build=no' unless $opt->with_sphinx;
+
   my $with_sanitizer = $opt->sanitizer ? " with " . $opt->sanitizer : "";
 
   my $san_flags = q{};
@@ -122,28 +144,6 @@ sub configure ($self, $opt) {
   }
 
   say "building cyrusversion $version$with_cc$with_sanitizer";
-
-  my @configopts = qw(
-    --enable-autocreate
-    --enable-calalarmd
-    --enable-gssapi
-    --enable-http
-    --enable-idled
-    --enable-murder
-    --enable-nntp
-    --enable-replication
-    --enable-shared
-    --enable-silent-rules
-    --enable-debug-slowio
-    --enable-unit-tests
-    --enable-xapian
-    --enable-jmap
-    --with-ldap=/usr
-    --with-nghttp2
-    --with-sqlite=yes
-  );
-
-  push @configopts, '--with-sphinx-build=no' unless $opt->with_sphinx;
 
   my $libsdir = '/usr/local/cyruslibs';
   my $target  = '/usr/cyrus';
