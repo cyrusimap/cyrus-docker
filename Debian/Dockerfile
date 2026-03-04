@@ -286,6 +286,7 @@ $CLEANUP && rm -rf cyruslibs || true
 EOF
 
 COPY bin /srv/bin
+COPY lib /srv/lib
 
 RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
 

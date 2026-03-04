@@ -1,0 +1,2051 @@
+#!/usr/bin/env perl
+#
+#   Copyright (c) International Business Machines  Corp., 2002,2012
+#
+#   This program is free software;  you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or (at
+#   your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY;  without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#   General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program;  if not, see
+#   <http://www.gnu.org/licenses/>.
+#
+#
+# lcov
+#
+#   This is a wrapper script which provides a single interface for accessing
+#   LCOV coverage data.
+#
+#
+# History:
+#   2002-08-29 created by Peter Oberparleiter <Peter.Oberparleiter@de.ibm.com>
+#                         IBM Lab Boeblingen
+#   2002-09-05 / Peter Oberparleiter: implemented --kernel-directory +
+#                multiple directories
+#   2002-10-16 / Peter Oberparleiter: implemented --add-tracefile option
+#   2002-10-17 / Peter Oberparleiter: implemented --extract option
+#   2002-11-04 / Peter Oberparleiter: implemented --list option
+#   2003-03-07 / Paul Larson: Changed to make it work with the latest gcov
+#                kernel patch.  This will break it with older gcov-kernel
+#                patches unless you change the value of $gcovmod in this script
+#   2003-04-07 / Peter Oberparleiter: fixed bug which resulted in an error
+#                when trying to combine .info files containing data without
+#                a test name
+#   2003-04-10 / Peter Oberparleiter: extended Paul's change so that LCOV
+#                works both with the new and the old gcov-kernel patch
+#   2003-04-10 / Peter Oberparleiter: added $gcov_dir constant in anticipation
+#                of a possible move of the gcov kernel directory to another
+#                file system in a future version of the gcov-kernel patch
+#   2003-04-15 / Paul Larson: make info write to STDERR, not STDOUT
+#   2003-04-15 / Paul Larson: added --remove option
+#   2003-04-30 / Peter Oberparleiter: renamed --reset to --zerocounters
+#                to remove naming ambiguity with --remove
+#   2003-04-30 / Peter Oberparleiter: adjusted help text to include --remove
+#   2003-06-27 / Peter Oberparleiter: implemented --diff
+#   2003-07-03 / Peter Oberparleiter: added line checksum support, added
+#                --no-checksum
+#   2003-12-11 / Laurent Deniel: added --follow option
+#   2004-03-29 / Peter Oberparleiter: modified --diff option to better cope with
+#                ambiguous patch file entries, modified --capture option to use
+#                modprobe before insmod (needed for 2.6)
+#   2004-03-30 / Peter Oberparleiter: added --path option
+#   2004-08-09 / Peter Oberparleiter: added configuration file support
+#   2008-08-13 / Peter Oberparleiter: added function coverage support
+#   2020-09-15 / Henry Cox:  refactor to use common utilities.
+#
+
+use strict;
+use warnings;
+use File::Basename qw(basename dirname);
+use File::Path qw(mkpath);
+use File::Find;
+use File::Spec::Functions qw /abs2rel canonpath catdir catfile catpath
+                              file_name_is_absolute rootdir splitdir splitpath/;
+use Cwd qw /abs_path getcwd/;
+use POSIX qw (floor);
+use FindBin;
+use Storable;
+use Time::HiRes;    # for profiling
+
+use lib "$FindBin::RealBin/../lib";
+use lcovutil qw ($tool_name $tool_dir $lcov_version $lcov_url
+                 define_errors parse_ignore_errors ignorable_error
+                 info set_info_callback init_verbose_flag $verbose
+                 $br_coverage $func_coverage
+                 debug $debug $devnull $dirseparator
+                 die_handler warn_handler abort_handler
+                 create_temp_dir temp_cleanup
+                 summarize_cov_filters
+                 $FILTER_BRANCH_NO_COND $FILTER_LINE_CLOSE_BRACE @cov_filter
+
+                 @exclude_file_patterns @include_file_patterns %excluded_files
+                 warn_file_patterns summarize_messages
+                 %lcovErrors $ERROR_GCOV $ERROR_SOURCE $ERROR_MISMATCH
+                 $ERROR_BRANCH $ERROR_EMPTY $ERROR_FORMAT $ERROR_VERSION
+                 $ERROR_UNUSED $ERROR_PACKAGE $ERROR_CORRUPT
+                 $ERROR_PARALLEL report_parallel_error
+                 system_no_output
+                 rate get_overall_line
+
+                 parseOptions
+                 strip_directories transform_pattern
+                 @extractVersionScript $verify_checksum
+                 @comments
+
+                 $maxParallelism $maxMemory
+  );
+
+# Directory containing gcov kernel files
+our $gcov_dir;
+
+# Internal constants
+our $GKV_PROC       = 0;    # gcov-kernel data in /proc via external patch
+our $GKV_SYS        = 1;    # gcov-kernel data in /sys via vanilla 2.6.31+
+our @GKV_NAME       = ("external", "upstream");
+our $pkg_gkv_file   = ".gcov_kernel_version";
+our $pkg_build_file = ".build_directory";
+
+# Branch data combination types
+our $BR_SUB = 0;
+our $BR_ADD = 1;
+
+# Prototypes
+sub print_usage(*);
+sub check_options();
+sub userspace_reset();
+sub userspace_capture();
+sub kernel_reset();
+sub kernel_capture();
+sub kernel_capture_initial();
+sub package_capture();
+sub add_traces();
+sub merge_traces($$);
+sub remove_file_patterns($);
+sub list();
+sub get_common_filename($$);
+sub read_diff($);
+sub diff();
+sub system_no_output($@);
+sub my_info(@);
+set_info_callback(\&my_info);
+sub create_temp_dir();
+sub setup_gkv();
+sub lcov_geninfo(@);
+sub create_package($$$;$);
+sub summary();
+
+# Global variables & initialization
+
+our @directory;           # Specifies where to get coverage data from
+our @kernel_directory;    # If set, captures only from specified kernel subdirs
+our @add_tracefile;       # If set, reads in and combines all files in list
+our @intersect;           # glob patterns for intersect RHS
+our @difference;          # glob patterns for difference RHS
+our $list;                # If set, list contents of tracefile
+our $diff;                # If set, modifies tracefile according to diff
+our $reset;               # If set, reset all coverage data to zero
+our $prune_testcases;     # If set, try to filter out useless tests that do not
+                          # contribute new coverage or new coverpoints
+our $output_filename;     # Name for file to write coverage data to
+our $test_name = "";               # Test case name
+our $cwd       = Cwd::getcwd();    # Current working directory
+our $data_stdout;        # If set, indicates that data is written to stdout
+our $follow;             # If set, indicates that find shall follow links
+our $base_directory;     # Base directory (cwd of gcc during compilation)
+our $compat_libtool;     # If set, indicates that libtool mode is to be enabled
+our $no_compat_libtool;  # If set, indicates that libtool mode is to be disabled
+
+our @gcov_tool;
+our @large_files;        # handled sequentially in geninfo
+our $initial;
+our $captureAll;
+our $no_recursion = 0;
+our $to_package;
+our $from_package;
+our $maxdepth;
+our $no_markers;
+chomp($cwd);
+our $gcov_gkv;           # gcov kernel support version found on machine
+our $opt_derive_func_data;
+our $opt_list_full_path;
+our $opt_no_list_full_path;
+our $opt_list_width        = 80;
+our $opt_list_truncate_max = 20;
+our $opt_external;
+our @opt_summary;
+our $opt_compat;
+
+#
+# Code entry point
+#
+
+$SIG{__WARN__} = \&lcovutil::warn_handler;
+$SIG{__DIE__}  = \&lcovutil::die_handler;
+$SIG{'INT'}    = \&lcovutil::abort_handler;
+$SIG{'QUIT'}   = \&lcovutil::abort_handler;
+
+lcovutil::save_cmd_line(\@ARGV, "$FindBin::RealBin");
+
+our @cmdArgs = @ARGV;
+
+my %lcov_rc_params = ("lcov_gcov_dir"          => \$gcov_dir,
+                      "lcov_list_full_path"    => \$opt_list_full_path,
+                      "lcov_list_width"        => \$opt_list_width,
+                      "lcov_list_truncate_max" => \$opt_list_truncate_max);
+
+my %lcov_options = ("directory|d|di=s"     => \@directory,
+                    "add-tracefile|a=s"    => \@add_tracefile,
+                    "list|l=s"             => \$list,
+                    "kernel-directory|k=s" => \@kernel_directory,
+                    "extract|e=s"          => \$lcovutil::lcov_extract,
+                    "remove|r=s"           => \$lcovutil::lcov_remove,
+                    "diff=s"               => \$diff,
+                    "capture|c"            => \$lcovutil::lcov_capture,
+                    "output-file|o=s"      => \$output_filename,
+                    "test-name|t=s"        => \$test_name,
+                    "zerocounters|z"       => \$reset,
+                    "follow|f"             => \$follow,
+                    "base-directory|b=s"   => \$base_directory,
+                    "compat-libtool"       => \$compat_libtool,
+                    "no-compat-libtool"    => \$no_compat_libtool,
+                    "gcov-tool=s"          => \@gcov_tool,
+                    'large-file=s'         => \@large_files,
+
+                    "initial|i"         => \$initial,
+                    "all"               => \$captureAll,
+                    "no-recursion"      => \$no_recursion,
+                    "to-package=s"      => \$to_package,
+                    "from-package=s"    => \$from_package,
+                    "no-markers"        => \$no_markers,
+                    "derive-func-data"  => \$opt_derive_func_data,
+                    "list-full-path"    => \$opt_list_full_path,
+                    "no-list-full-path" => \$opt_no_list_full_path,
+                    "external"          => \$opt_external,
+                    "no-external"       => \$lcovutil::opt_no_external,
+                    "summary=s"         => \@opt_summary,
+                    "compat=s"          => \$opt_compat,
+                    "prune-tests"       => \$prune_testcases,
+                    "map-functions"     => \$AggregateTraces::function_mapping,
+
+                    'intersect=s' => \@intersect,
+                    'subtract=s'  => \@difference,);
+
+# geninfo args might get passed to lcov for --capture mode - so we need to not croak on them
+my %mergedRcOpts = (%lcov_rc_params, %lcovutil::geninfo_rc_opts);
+
+# Parse command line options
+if (!lcovutil::parseOptions(\%mergedRcOpts, \%lcov_options, \$output_filename))
+{
+    print(STDERR "Use $tool_name --help to get usage information\n");
+    exit(1);
+}
+
+if (defined($no_compat_libtool)) {
+    $compat_libtool    = ($no_compat_libtool ? 0 : 1);
+    $no_compat_libtool = undef;
+}
+
+if (defined($opt_no_list_full_path)) {
+    $opt_list_full_path    = ($opt_no_list_full_path ? 0 : 1);
+    $opt_no_list_full_path = undef;
+}
+
+if (defined($base_directory)) {
+    push(@ReadCurrentSource::source_directories, $base_directory);
+    push(@lcovutil::internal_dirs, $base_directory);
+}
+if (defined($opt_external)) {
+    $lcovutil::opt_no_external = 0;
+    $opt_external              = undef;
+}
+
+my $begin = Time::HiRes::gettimeofday();
+
+if ($initial && !$lcovutil::lcov_capture) {
+    lcovutil::ignorable_warning($lcovutil::ERROR_USAGE,
+                          "'--initial' is ignored except in '--capture' mode.");
+    $initial = undef;
+}
+
+if ($captureAll && $initial) {
+    lcovutil::ignorable_warning($lcovutil::ERROR_USAGE,
+                                "'--all' ignored when '--initial' is used.");
+    $captureAll = undef;
+}
+
+# Check list width option
+if ($opt_list_width <= 40) {
+    die("lcov_list_width parameter out of range (needs to be " .
+        "larger than 40)\n");
+}
+
+$follow   = $follow ? '-follow' : '';
+$maxdepth = $no_recursion ? '-maxdepth 1' : '';
+
+# Check for valid options
+check_options();
+
+# Only --extract, --remove and --diff, --intersect, --subtract allow unnamed parameters
+if (@ARGV &&
+    !(  $lcovutil::lcov_extract ||
+        $lcovutil::lcov_remove  ||
+        $diff                   ||
+        @intersect              ||
+        @difference             ||
+        @opt_summary)
+) {
+    die("Extra parameter found: '" .
+        join(" ", @ARGV) .
+        "'\n" . "Use $tool_name --help to get usage information\n");
+}
+
+if (defined($lcovutil::opt_no_external) &&
+    !(defined($lcovutil::lcov_capture) && $lcovutil::lcov_capture != 0)) {
+    lcovutil::ignorable_warning($lcovutil::ERROR_USAGE,
+                  "'--no-external' is ignored except in 'lcov --capture|-c'\n");
+    $lcovutil::opt_no_external = 0;
+}
+
+# Check for output filename
+$data_stdout = !($output_filename && ($output_filename ne "-"));
+
+if ($lcovutil::lcov_capture && $data_stdout) {
+    # Option that tells geninfo to write to stdout
+    $output_filename = "-";
+}
+
+# Determine kernel directory for gcov data
+if (!$from_package && !@directory && ($lcovutil::lcov_capture || $reset)) {
+    ($gcov_gkv, $gcov_dir) = setup_gkv();
+}
+
+our $exit_code = 0;
+
+my $trace;
+
+eval {
+    # Check for requested functionality
+    if ($reset) {
+        $data_stdout = 0;
+        # Differentiate between user space and kernel reset
+        if (@directory) {
+            userspace_reset();
+        } else {
+            kernel_reset();
+        }
+    } elsif ($lcovutil::lcov_capture) {
+        # Capture source can be user space, kernel or package
+        if ($from_package) {
+            package_capture();
+        } elsif (@directory) {
+            userspace_capture();
+        } else {
+            if ($initial) {
+                die("--initial cannot be used together with --to-package\n")
+                    if (defined($to_package));
+                kernel_capture_initial();
+            } else {
+                kernel_capture();
+            }
+        }
+    } elsif (@add_tracefile) {
+        if ($AggregateTraces::function_mapping) {
+            $AggregateTraces::function_mapping = {};
+            add_traces();
+
+            my $file = InOutFile->out($output_filename);
+            my $hdl  = $file->hdl();
+            while (my ($key, $data) = each(%$AggregateTraces::function_mapping))
+            {
+                print($hdl $data->[0] . ": " . $key . "\n");
+                foreach my $f (@{$data->[1]}) {
+                    print($hdl "  $f\n");
+                }
+            }
+        } elsif (defined($prune_testcases)) {
+            my ($pruned, $merged) = add_traces();
+
+            info("Pruned result: retained " .
+                 scalar(@$pruned) . " of " .
+                 scalar(@$merged) . " files\n");
+            my $file = InOutFile->out($output_filename);
+            my $hdl  = $file->hdl();
+            print($hdl join("\n", @$pruned) . "\n");
+        } else {
+            $trace = add_traces();
+        }
+    } elsif ($lcovutil::lcov_remove) {
+        # remove files matching patterns
+        $trace = remove_file_patterns($lcovutil::lcov_remove);
+    } elsif ($lcovutil::lcov_extract) {
+        # kep only the files matching patterns
+        $trace = remove_file_patterns($lcovutil::lcov_extract);
+    } elsif ($list) {
+        $data_stdout = 0;
+        list();
+    } elsif ($diff) {
+        die("Deprecated command \"lcov --diff ...\" is no longer supported and had been removed.\nPlease see the \"differential coverage\" section in the genhtml manual for a more flexible alternative,\nor use an older lcov release if you need the feature."
+        );
+    } elsif (@opt_summary) {
+        $data_stdout = 0;
+        $trace       = summary();
+    } elsif (@intersect) {
+        $trace = merge_traces(\@intersect, TraceInfo::INTERSECT);
+    } elsif (@difference) {
+        $trace = merge_traces(\@difference, TraceInfo::DIFFERENCE);
+    }
+};
+if ($@) {
+    $exit_code = 1;
+    print(STDERR $@);
+}
+
+temp_cleanup();
+chdir($cwd);
+
+if (0 == $exit_code) {
+    if (defined($trace)) {
+        # the numbers do not reflect coverpoints in 'erased' functions.
+        #  the issue is that we filter them out in the write operation - but
+        #  we don't bother to read it back
+        $trace->print_summary();
+        $trace->checkCoverageCriteria();
+        $exit_code = 1 if $CoverageCriteria::coverageCriteriaStatus;
+        CoverageCriteria::summarize();
+    } else {
+        info("Done.\n") if (!$list && !$lcovutil::lcov_capture);
+    }
+    if (!defined($lcovutil::lcov_capture)) {
+        lcovutil::warn_file_patterns()
+            ;    # warn about unused include/exclude directives
+        ReadCurrentSource::warn_sourcedir_patterns();
+        summarize_cov_filters();
+        summarize_messages();
+    }
+}
+my $end = Time::HiRes::gettimeofday();
+$lcovutil::profileData{total} = $end - $begin;
+
+unless ($lcovutil::lcov_capture) {
+    # if we executed 'geninfo' - then we saved the profile data from that process
+    lcovutil::cleanup_callbacks();
+    lcovutil::save_profile($output_filename ? $output_filename : "lcov");
+}
+
+# exit with non-zero status if --keep-going and some errors detected
+$exit_code = 1
+    if (0 == $exit_code &&
+        lcovutil::saw_error());
+
+exit($exit_code);
+
+#
+# print_usage(handle)
+#
+# Print usage information.
+#
+
+sub print_usage(*)
+{
+    local *HANDLE = $_[0];
+
+    print(HANDLE <<END_OF_USAGE);
+Usage: $tool_name [OPTIONS]
+
+Use lcov to collect coverage data from either the currently running Linux
+kernel or from a user space application. Specify the --directory option to
+get coverage data for a user space program.
+
+COMMON OPTIONS
+  -h, --help                      Print this help, then exit
+      --version                   Print version number, then exit
+  -v, --verbose                   Increase verbosity level
+  -q, --quiet                     Decrease verbosity level (e.g. to turn off
+                                  progress messages)
+      --debug                     Increase debug verbosity level
+      --config-file FILENAME      Specify configuration file location
+      --rc SETTING=VALUE          Override configuration file setting
+      --ignore-errors ERRORS      Continue after ERRORS (see man page for
+                                  full list of errors and their meaning)
+      --keep-going                Do not stop if an error occurs
+      --tempdir DIRNAME           Write temporary and intermediate data here
+      --preserve                  Keep intermediate files for debugging
+
+OPERATION
+  -z, --zerocounters              Reset all execution counts to zero
+  -c, --capture                   Capture coverage data
+  -a, --add-tracefile PATTERN     Add contents of tracefiles matching glob PATTERN
+  -e, --extract FILE PATTERN      Extract files matching PATTERN from FILE
+  -r, --remove FILE PATTERN       Remove files matching PATTERN from FILE
+  -l, --list FILE                 List contents of tracefile FILE
+      --summary FILE              Show summary coverage data for tracefiles
+      --prune-tests               List tracefiles contributing unique coverage
+                                  data (requires --add-tracefile)
+      --map-functions             List tracefiles with non-zero coverage for
+                                  each function (requires --add-tracefile)
+     --intersect PATTERN          Set intersection with tracefiles matching
+                                  glob PATTERN
+     --subtract PATTERN           Set difference with tracefiles matching
+                                  glob PATTERN
+
+OPTIONS
+  -i, --initial                   Capture initial zero coverage data
+  --all                           Capture from both .gcda and lone .gcno files
+  -t, --test-name NAME            Specify test name to be stored with data
+  -o, --output-file FILENAME      Write data to FILENAME instead of stdout
+  -d, --directory DIR             Use .da files in DIR instead of kernel
+  -f, --follow                    Follow links when searching .da files
+  -k, --kernel-directory KDIR     Capture kernel coverage data only from KDIR
+  -b, --base-directory DIR        Use DIR as base directory for relative paths
+      --build-directory DIR       Search DIR for .gcno files (during capture)
+      --path PATH                 Strip PATH from tracefile when applying diff
+      --(no-)function-coverage    Enable (disable) function coverage collection
+      --(no-)branch-coverage      Enable (disable) branch coverage collection
+      --(no-)checksum             Enable (disable) line checksumming
+      --(no-)compat-libtool       Enable (disable) libtool compatibility mode
+      --gcov-tool TOOL            Specify gcov tool location
+      --filter TYPE               Apply FILTERS to input data (see man page
+                                  for full list of filters and their effects)
+      --demangle-cpp              Demangle C++ function names
+      --no-recursion              Exclude subdirectories from processing
+      --to-package FILENAME       Store unprocessed coverage data in FILENAME
+      --from-package FILENAME     Capture from unprocessed data in FILENAME
+      --no-markers                Ignore exclusion markers in source code
+      --derive-func-data          Generate function data from line data
+      --list-full-path            Print full path during a list operation
+      --(no-)external             Include (ignore) data for external files
+      --compat MODE=on|off|auto   Set compat MODE (libtool, hammer, split_crc)
+      --include PATTERN           Include files matching PATTERN
+      --exclude PATTERN           Exclude files matching PATTERN
+      --substitute REGEXP         Change source file names according to REGEXP
+      --erase-functions REGEXP    Exclude data for functions matching REGEXP
+      --omit-lines REGEXP         Ignore data in lines matching REGEXP
+      --forget-test-names         Merge data for all tests names
+      --fail-under-lines MIN      Exit with a status of 1 if the total line
+                                  coverage is less than MIN (summary option)
+      --version-script SCRIPTNAME Call script to find revision control version
+                                  ID of source file
+      --resolve-script SCRIPTNAME Call script to find source file frpm path
+  -j, --parallel [NUM]            Use parallel processing with at most NUM jobs
+      --memory MB                 Use at most MB memory in parallel processing
+      --profile [FILENAME]        Write performance statistics to FILENAME
+                                  (default: OUTPUT_FILENAME.json)
+
+For more information see the lcov man page.
+END_OF_USAGE
+
+}
+
+#
+# check_options()
+#
+# Check for valid combination of command line options. Die on error.
+#
+
+sub check_options()
+{
+    my $i = 0;
+
+    # Count occurrence of mutually exclusive options
+    $reset                  && $i++;
+    $lcovutil::lcov_capture && $i++;
+    @add_tracefile          && $i++;
+    $lcovutil::lcov_extract && $i++;
+    $lcovutil::lcov_remove  && $i++;
+    $list                   && $i++;
+    $diff                   && $i++;
+    @opt_summary            && $i++;
+    @intersect              && $i++;
+    @difference             && $i++;
+
+    if ($i == 0 ||
+        $i > 1) {
+        die("invalid command line:\n  $0 " .
+                join(' ', @main::cmdArgs) .
+                "\nNeed " . ($i > 1 ? 'only ' : '') .
+                "one of options -z, -c, -a, -e, -r, -l, --diff, --intersect, --subtract, or --summary\n"
+                . "Use $tool_name --help to get usage information\n");
+    }
+
+    if ($prune_testcases && 0 == scalar(@add_tracefile)) {
+        lcovutil::ignorable_error($lcovutil::ERROR_USAGE,
+            "--prune-tests has effect only when -a/--add-tracefile is specified"
+        );
+    }
+}
+
+#
+# userspace_reset()
+#
+# Reset coverage data found in DIRECTORY by deleting all contained .da files.
+#
+# Die on error.
+#
+
+sub userspace_reset()
+{
+    my @file_list;
+
+    foreach my $pattern (@directory) {
+        my @dirs;
+        if (-d $pattern) {
+            push(@dirs, $pattern);
+        } else {
+            $pattern =~ s/([^\\]) /$1\\ /g          # explicitly escape spaces
+                unless $^O =~ /Win/;
+            @dirs = glob($pattern);
+        }
+        my $count = 0;
+        foreach my $current_dir (@dirs) {
+            if (!-d $current_dir) {
+                lcovutil::ignorable_error($lcovutil::ERROR_USAGE,
+                                          "$current_dir is not a directory");
+                next;
+            }
+            ++$count;
+            info("Deleting all .da files in $current_dir" .
+                 ($no_recursion ? "\n" : " and subdirectories\n"));
+            @file_list =
+                `find "$current_dir" $maxdepth $follow -name \\*\\.da -type f -o -name \\*\\.gcda -type f 2>$lcovutil::devnull`;
+            die("Error return code from 'find \"$current_dir\" ...': $!")
+                if ($?);
+            chomp(@file_list);
+            foreach (@file_list) {
+                unlink($_) or die("cannot remove file $_: $!\n");
+            }
+        }
+        ignorable_error($ERROR_EMPTY,
+                        "$pattern does not match any directory entries")
+            if 0 == $count;
+    }
+}
+
+#
+# userspace_capture()
+#
+# Capture coverage data found in DIRECTORY and write it to a package (if
+# TO_PACKAGE specified) or to OUTPUT_FILENAME or STDOUT.
+#
+# Die on error.
+#
+
+sub userspace_capture()
+{
+    my $dir;
+    my $build;
+
+    if (!defined($to_package)) {
+        lcov_geninfo(@directory);
+        return;
+    }
+    if (scalar(@directory) != 1) {
+        die("-d may be specified only once with --to-package\n");
+    }
+    $dir = $directory[0];
+    if (defined($base_directory)) {
+        $build = $base_directory;
+    } else {
+        $build = $dir;
+    }
+    create_package($to_package, $dir, $build);
+}
+
+#
+# kernel_reset()
+#
+# Reset kernel coverage.
+#
+# Die on error.
+#
+
+sub kernel_reset()
+{
+    local *HANDLE;
+    my $reset_file;
+
+    info("Resetting kernel execution counters\n");
+    if (-e "$gcov_dir/vmlinux") {
+        $reset_file = "$gcov_dir/vmlinux";
+    } elsif (-e "$gcov_dir/reset") {
+        $reset_file = "$gcov_dir/reset";
+    } else {
+        die("no reset control found in $gcov_dir\n");
+    }
+    open(HANDLE, ">", $reset_file) or
+        die("cannot write to $reset_file: $!\n");
+    print(HANDLE "0");
+    close(HANDLE);
+}
+
+#
+# lcov_copy_single(from, to)
+#
+# Copy single regular file FROM to TO without checking its size. This is
+# required to work with special files generated by the kernel
+# seq_file-interface.
+#
+#
+sub lcov_copy_single($$)
+{
+    my ($from, $to) = @_;
+    my $content;
+    local $/;
+    local *HANDLE;
+
+    open(HANDLE, "<", $from) or die("cannot read $from: $!\n");
+    $content = <HANDLE>;
+    close(HANDLE);
+    open(HANDLE, ">", $to) or die("cannot write $from: $!\n");
+    if (defined($content)) {
+        print(HANDLE $content);
+    }
+    close(HANDLE);
+}
+
+#
+# lcov_find(dir, function, data[, extension, ...)])
+#
+# Search DIR for files and directories whose name matches PATTERN and run
+# FUNCTION for each match. If no pattern is specified, match all names.
+#
+# FUNCTION has the following prototype:
+#   function(dir, relative_name, data)
+#
+# Where:
+#   dir: the base directory for this search
+#   relative_name: the name relative to the base directory of this entry
+#   data: the DATA variable passed to lcov_find
+#
+sub lcov_find($$$;@)
+{
+    my ($dir, $fn, $data, @pattern) = @_;
+    my $result;
+    my $_fn = sub {
+        my $filename = $File::Find::name;
+
+        if (defined($result)) {
+            return;
+        }
+        $filename = abs2rel($filename, $dir);
+        foreach (@pattern) {
+            if (($lcovutil::case_insensitive && $filename =~ /$_/i) ||
+                (!$lcovutil::case_insensitive && $filename =~ /$_/)) {
+                goto ok;
+            }
+        }
+        return;
+        ok:
+        $result = &$fn($dir, $filename, $data);
+    };
+    if (scalar(@pattern) == 0) {
+        @pattern = ".*";
+    }
+    find({wanted => $_fn, no_chdir => 1}, $dir);
+
+    return $result;
+}
+
+#
+# lcov_copy_fn(from, rel, to)
+#
+# Copy directories, files and links from/rel to to/rel.
+#
+
+sub lcov_copy_fn($$$)
+{
+    my ($from, $rel, $to) = @_;
+    my $absfrom = canonpath(catfile($from, $rel));
+    my $absto   = canonpath(catfile($to, $rel));
+
+    if (-d) {
+        if (!-d $absto) {
+            mkpath($absto) or
+                die("cannot create directory $absto\n");
+            chmod(0700, $absto);
+        }
+    } elsif (-l) {
+        # Copy symbolic link
+        my $link = readlink($absfrom);
+
+        if (!defined($link)) {
+            die("cannot read link $absfrom: $!\n");
+        }
+        symlink($link, $absto) or
+            die("cannot create link $absto: $!\n");
+    } else {
+        lcov_copy_single($absfrom, $absto);
+        chmod(0600, $absto);
+    }
+    return undef;
+}
+
+#
+# lcov_copy(from, to, subdirs)
+#
+# Copy all specified SUBDIRS and files from directory FROM to directory TO. For
+# regular files, copy file contents without checking its size. This is required
+# to work with seq_file-generated files.
+#
+
+sub lcov_copy($$;@)
+{
+    my ($from, $to, @subdirs) = @_;
+    my @pattern;
+
+    foreach (@subdirs) {
+        push(@pattern, "^$_");
+    }
+    lcov_find($from, \&lcov_copy_fn, $to, @pattern);
+}
+
+#
+# lcov_geninfo(directory)
+#
+# Call geninfo for the specified directory and with the parameters specified
+# at the command line.
+#
+
+sub lcov_geninfo(@)
+{
+    my (@dir) = @_;
+    my @param;
+
+    # Capture data
+    info("Capturing coverage data from " . join(" ", @dir) . "\n");
+    @param = (File::Spec->catfile($tool_dir, 'geninfo'), @dir);
+    # make things less confusing for user, by using the name they actually invoked
+    push(@param, '--toolname', $lcovutil::tool_name);
+    if ($output_filename) {
+        push(@param, "--output-filename", $output_filename);
+    }
+    if ($test_name) {
+        push(@param, "--test-name", $test_name);
+    }
+    if ($follow) {
+        push(@param, "--follow");
+    }
+    push(@param, '--msg-log', $lcovutil::message_filename)
+        if $lcovutil::message_filename;
+    if ($lcovutil::verbose != 0) {
+        if ($lcovutil::verbose < 0) {
+            for (my $i = $lcovutil::verbose; $i < 0; ++$i) {
+                push(@param, '--quiet');
+            }
+        } else {
+            for (my $i = 0; $i < $lcovutil::verbose; ++$i) {
+                push(@param, '--verbose');
+            }
+        }
+    }
+    if (defined($verify_checksum)) {
+        push(@param, $verify_checksum ? '--checksum' : '--no-checksum');
+    }
+    foreach my $s (@ReadCurrentSource::source_directories) {
+        # a bit of a hack:  we pushed the --base-directory argument onto
+        #  the source list - and we need to make sure that we only pass
+        #  it to geninfo once.
+        push(@param, "--source-directory", $s)
+            unless (defined($base_directory) && $s eq $base_directory);
+    }
+    if ($no_compat_libtool) {
+        push(@param, "--no-compat-libtool");
+    } elsif ($compat_libtool) {
+        push(@param, "--compat-libtool");
+    }
+    if (defined($lcovutil::stop_on_error) && $lcovutil::stop_on_error == 0) {
+        push(@param, "--keep-going");
+    }
+    if (defined($lcovutil::preserve_intermediates) &&
+        $lcovutil::preserve_intermediates) {
+        push(@param, "--preserve");
+    }
+    push(@param, "--base-directory", $base_directory)
+        if $base_directory;
+    foreach (
+             split($lcovutil::split_char,
+                   join($lcovutil::split_char, @lcovutil::opt_ignore_errors))
+    ) {
+        # pass only the 'ignore' options that geninfo understands
+        push(@param, "--ignore-errors", $_)
+            if exists($lcovutil::lcovErrors{$_});
+    }
+    if ($no_recursion) {
+        push(@param, "--no-recursion");
+    }
+    if ($initial) {
+        push(@param, "--initial");
+    }
+    if ($captureAll) {
+        push(@param, "--all");
+    }
+    if ($no_markers) {
+        push(@param, "--no-markers");
+    }
+    if ($opt_derive_func_data) {
+        push(@param, "--derive-func-data");
+    }
+    for (my $i = 0; $i < $lcovutil::debug; ++$i) {
+        push(@param, "--debug");
+    }
+    if (defined($opt_external) && $opt_external) {
+        push(@param, "--external");
+    } elsif (defined($lcovutil::opt_no_external) && $lcovutil::opt_no_external)
+    {
+        push(@param, "--no-external");
+    }
+    if (defined($opt_compat)) {
+        push(@param, "--compat", $opt_compat);
+    }
+
+    if (defined($lcovutil::profile)) {
+        push(@param, '--profile');
+        push(@param, $lcovutil::profile)
+            if ('' ne $lcovutil::profile);
+    }
+    if (defined($lcovutil::maxParallelism)) {
+        push(@param, '--parallel', $lcovutil::maxParallelism);
+    }
+    # memory has not been multiplied by Mb yet - so just pass the integer value
+    push(@param, '--memory', $lcovutil::maxMemory)
+        if defined($lcovutil::maxMemory);
+    push(@param, "--branch-coverage") if $lcovutil::br_coverage;
+    push(@param, "--mcdc") if $lcovutil::mcdc_coverage;
+    push(@param, '--fail-under-lines', $lcovutil::fail_under_lines)
+        if defined($lcovutil::fail_under_lines);
+    push(@param, '--tempdir', $lcovutil::tempdirname)
+        if (defined($lcovutil::tempdirname));
+    foreach my $listOpt (['--comment', \@lcovutil::comments],
+                         ['--config-file', \@lcovutil::opt_config_files],
+                         ['--rc', \@lcovutil::opt_rc],
+                         ['--build-directory', \@lcovutil::build_directory],
+                         ['--gcov-tool', \@gcov_tool],
+                         ['--demangle-cpp', \@lcovutil::cpp_demangle],
+                         ['--include', \@lcovutil::include_file_patterns],
+                         ['--exclude', \@lcovutil::exclude_file_patterns],
+                         ['--context-script', \@lcovutil::contextCallback],
+                         ['--criteria-script',
+                          \@CoverageCriteria::coverageCriteriaScript
+                         ],
+                         ['--version-script', \@lcovutil::extractVersionScript],
+                         ['--resolve-script', \@lcovutil::resolveCallback],
+                         ['--substitute', \@lcovutil::file_subst_patterns],
+                         ['--omit-lines', \@lcovutil::omit_line_patterns],
+                         ['--erase-functions',
+                          \@lcovutil::exclude_function_patterns
+                         ],
+                         ['--filter', \@lcovutil::opt_filter],
+                         ['--large-file', \@large_files],
+    ) {
+        my ($opt, $l) = @$listOpt;
+        foreach my $v (@$l) {
+            push(@param, $opt, $v);
+        }
+    }
+
+    # windows
+    #  Kind of hacky to fork another script here.
+    #  Probably better/cleaner to move the 'geninfo' functionality into
+    #  a perl module - then use it here and in the geninfo script.
+    #  Maybe someday.
+    unshift(@param, $lcovutil::interp) if defined($lcovutil::interp);
+    info("geninfo cmd: '" . join(' ', @param) . "'\n");
+    system(@param) and exit($? >> 8);
+}
+
+#
+# read_file(filename)
+#
+# Return the contents of the file defined by filename.
+#
+
+sub read_file($)
+{
+    my ($filename) = @_;
+    my $content;
+    local $\;
+    local *HANDLE;
+
+    open(HANDLE, "<", $filename) || return undef;
+    $content = <HANDLE>;
+    close(HANDLE);
+
+    return $content;
+}
+
+#
+# get_package(package_file)
+#
+# Unpack unprocessed coverage data files from package_file to a temporary
+# directory and return directory name, build directory and gcov kernel version
+# as found in package.
+#
+
+sub get_package($)
+{
+    my ($file) = @_;
+    my $dir = create_temp_dir();
+    my $gkv;
+    my $build;
+    my $cwd = getcwd();
+    my $count;
+    local *HANDLE;
+
+    info("Reading package $file:\n");
+    $file = abs_path($file);
+    chdir($dir);
+    open(HANDLE, "-|", "tar xvfz '$file' 2>$lcovutil::devnull") or
+        die("could not process package $file: $!\n");
+    $count = 0;
+    while (<HANDLE>) {
+        if (/\.da$/ || /\.gcda$/) {
+            $count++;
+        }
+    }
+    close(HANDLE);
+    if ($count == 0) {
+        die("no data file found in package $file\n");
+    }
+    info("  data directory .......: $dir\n");
+    $build = read_file(File::Spec->catfile($dir, $pkg_build_file));
+    if (defined($build)) {
+        info("  build directory ......: $build\n");
+    }
+    $gkv = read_file(File::Spec->catfile($dir, $pkg_gkv_file));
+    if (defined($gkv)) {
+        $gkv = int($gkv);
+        if ($gkv != $GKV_PROC && $gkv != $GKV_SYS) {
+            die("unsupported gcov kernel version found ($gkv)\n");
+        }
+        info("  content type .........: kernel data\n");
+        info("  gcov kernel version ..: %s\n", $GKV_NAME[$gkv]);
+    } else {
+        info("  content type .........: application data\n");
+    }
+    info("  data files ...........: $count\n");
+    chdir($cwd);
+
+    return ($dir, $build, $gkv);
+}
+
+#
+# write_file(filename, $content)
+#
+# Create a file named filename and write the specified content to it.
+#
+
+sub write_file($$)
+{
+    my ($filename, $content) = @_;
+    local *HANDLE;
+
+    open(HANDLE, ">", $filename) || return 0;
+    print(HANDLE $content);
+    close(HANDLE) || return 0;
+
+    return 1;
+}
+
+# count_package_data(filename)
+#
+# Count the number of coverage data files in the specified package file.
+#
+
+sub count_package_data($)
+{
+    my ($filename) = @_;
+    local *HANDLE;
+    my $count = 0;
+
+    open(HANDLE, "-|", "tar tfz '$filename'") or return undef;
+    while (<HANDLE>) {
+        if (/\.da$/ || /\.gcda$/) {
+            $count++;
+        }
+    }
+    close(HANDLE);
+    return $count;
+}
+
+#
+# create_package(package_file, source_directory, build_directory[,
+#                kernel_gcov_version])
+#
+# Store unprocessed coverage data files from source_directory to package_file.
+#
+
+sub create_package($$$;$)
+{
+    my ($file, $dir, $build, $gkv) = @_;
+    my $cwd = getcwd();
+
+    # Check for availability of tar tool first
+    system("tar --help > $lcovutil::devnull") and
+        die("tar command not available\n");
+
+    # Print information about the package
+    info("Creating package $file:\n");
+    info("  data directory .......: $dir\n");
+
+    # Handle build directory
+    if (defined($build)) {
+        info("  build directory ......: $build\n");
+        write_file(File::Spec->catfile($dir, $pkg_build_file), $build) or
+            die("could not write to $dir/$pkg_build_file\n");
+    }
+
+    # Handle gcov kernel version data
+    if (defined($gkv)) {
+        info("  content type .........: kernel data\n");
+        info("  gcov kernel version ..: %s\n", $GKV_NAME[$gkv]);
+        write_file(File::Spec->catfile($dir, $pkg_gkv_file), $gkv) or
+            die("could not write to $dir/$pkg_gkv_file\n");
+    } else {
+        info("  content type .........: application data\n");
+    }
+
+    # Create package
+    $file = abs_path($file);
+    chdir($dir);
+    system("tar cfz $file .") and
+        die("could not create package $file\n");
+    chdir($cwd);
+
+    # Remove temporary files
+    unlink(File::Spec->catfile($dir, $pkg_build_file));
+    unlink(File::Spec->catfile($dir, $pkg_gkv_file));
+
+    # Show number of data files
+    if ($lcovutil::verbose >= 0) {
+        my $count = count_package_data($file);
+
+        if (defined($count)) {
+            info("  data files ...........: $count\n");
+        }
+    }
+}
+
+sub find_link_fn($$$)
+{
+    my ($from, $rel, $filename) = @_;
+    my $absfile = catfile($from, $rel, $filename);
+
+    if (-l $absfile) {
+        return $absfile;
+    }
+    return undef;
+}
+
+#
+# get_base(dir)
+#
+# Return (BASE, OBJ), where
+#  - BASE: is the path to the kernel base directory relative to dir
+#  - OBJ: is the absolute path to the kernel build directory
+#
+
+sub get_base($)
+{
+    my ($dir) = @_;
+    my $marker = "kernel/gcov/base.gcno";
+    my $markerfile;
+    my $sys;
+    my $obj;
+    my $link;
+
+    $markerfile = lcov_find($dir, \&find_link_fn, $marker);
+    if (!defined($markerfile)) {
+        return (undef, undef);
+    }
+
+    # sys base is parent of parent of markerfile.
+    $sys = abs2rel(dirname(dirname(dirname($markerfile))), $dir);
+
+    # obj base is parent of parent of markerfile link target.
+    $link = readlink($markerfile);
+    if (!defined($link)) {
+        die("could not read $markerfile\n");
+    }
+    $obj = dirname(dirname(dirname($link)));
+
+    return ($sys, $obj);
+}
+
+#
+# apply_base_dir(data_dir, base_dir, build_dir, @directories)
+#
+# Make entries in @directories relative to data_dir.
+#
+
+sub apply_base_dir($$$@)
+{
+    my ($data, $base, $build, @dirs) = @_;
+    my $dir;
+    my @result;
+
+    foreach $dir (@dirs) {
+        # Is directory path relative to data directory?
+        if (-d catdir($data, $dir)) {
+            push(@result, $dir);
+            next;
+        }
+        # Relative to the auto-detected base-directory?
+        if (defined($base)) {
+            if (-d catdir($data, $base, $dir)) {
+                push(@result, catdir($base, $dir));
+                next;
+            }
+        }
+        # Relative to the specified base-directory?
+        if (defined($base_directory)) {
+            if (file_name_is_absolute($base_directory)) {
+                $base = abs2rel($base_directory, rootdir());
+            } else {
+                $base = $base_directory;
+            }
+            if (-d catdir($data, $base, $dir)) {
+                push(@result, catdir($base, $dir));
+                next;
+            }
+        }
+        # Relative to the build directory?
+        if (defined($build)) {
+            if (file_name_is_absolute($build)) {
+                $base = abs2rel($build, rootdir());
+            } else {
+                $base = $build;
+            }
+            if (-d catdir($data, $base, $dir)) {
+                push(@result, catdir($base, $dir));
+                next;
+            }
+        }
+        die("subdirectory $dir not found\n" .
+            "Please use -b to specify the correct directory\n");
+    }
+    return @result;
+}
+
+#
+# copy_gcov_dir(dir, [@subdirectories])
+#
+# Create a temporary directory and copy all or, if specified, only some
+# subdirectories from dir to that directory. Return the name of the temporary
+# directory.
+#
+
+sub copy_gcov_dir($;@)
+{
+    my ($data, @dirs) = @_;
+    my $tempdir = create_temp_dir();
+
+    info("Copying data to temporary directory $tempdir\n");
+    lcov_copy($data, $tempdir, @dirs);
+
+    return $tempdir;
+}
+
+#
+# kernel_capture_initial
+#
+# Capture initial kernel coverage data, i.e. create a coverage data file from
+# static graph files which contains zero coverage data for all instrumented
+# lines.
+#
+
+sub kernel_capture_initial()
+{
+    my $build;
+    my $source;
+    my @params;
+
+    if (defined($base_directory)) {
+        $build  = $base_directory;
+        $source = "specified";
+    } else {
+        (undef, $build) = get_base($gcov_dir);
+        if (!defined($build)) {
+            die("could not auto-detect build directory.\n" .
+                "Please use -b to specify the build directory\n");
+        }
+        $source = "auto-detected";
+    }
+    info("Using $build as kernel build directory ($source)\n");
+    # Build directory needs to be passed to geninfo
+    $base_directory = $build;
+    if (@kernel_directory) {
+        foreach my $dir (@kernel_directory) {
+            push(@params, File::Scpec->catdir($build, $dir));
+        }
+    } else {
+        push(@params, $build);
+    }
+    lcov_geninfo(@params);
+}
+
+#
+# kernel_capture_from_dir(directory, gcov_kernel_version, build)
+#
+# Perform the actual kernel coverage capturing from the specified directory
+# assuming that the data was copied from the specified gcov kernel version.
+#
+
+sub kernel_capture_from_dir($$$)
+{
+    my ($dir, $gkv, $build) = @_;
+
+    # Create package or coverage file
+    if (defined($to_package)) {
+        create_package($to_package, $dir, $build, $gkv);
+    } else {
+        # Build directory needs to be passed to geninfo
+        $base_directory = $build;
+        lcov_geninfo($dir);
+    }
+}
+
+#
+# adjust_kernel_dir(dir, build)
+#
+# Adjust directories specified with -k so that they point to the directory
+# relative to DIR. Return the build directory if specified or the auto-
+# detected build-directory.
+#
+
+sub adjust_kernel_dir($$)
+{
+    my ($dir, $build)           = @_;
+    my ($sys_base, $build_auto) = get_base($dir);
+
+    if (!defined($build)) {
+        $build = $build_auto;
+    }
+    if (!defined($build)) {
+        die("could not auto-detect build directory.\n" .
+            "Please use -b to specify the build directory\n");
+    }
+    # Make @kernel_directory relative to sysfs base
+    if (@kernel_directory) {
+        @kernel_directory =
+            apply_base_dir($dir, $sys_base, $build, @kernel_directory);
+    }
+    return $build;
+}
+
+sub kernel_capture()
+{
+    my $data_dir;
+    my $build = $base_directory;
+
+    if ($gcov_gkv == $GKV_SYS) {
+        $build = adjust_kernel_dir($gcov_dir, $build);
+    }
+    $data_dir = copy_gcov_dir($gcov_dir, @kernel_directory);
+    kernel_capture_from_dir($data_dir, $gcov_gkv, $build);
+}
+
+#
+# link_data_cb(datadir, rel, graphdir)
+#
+# Create symbolic link in GRAPDIR/REL pointing to DATADIR/REL.
+#
+
+sub link_data_cb($$$)
+{
+    my ($datadir, $rel, $graphdir) = @_;
+    my $absfrom = catfile($datadir, $rel);
+    my $absto   = catfile($graphdir, $rel);
+    my $base;
+    my $dir;
+
+    if (-e $absto) {
+        die("could not create symlink at $absto: " . "File already exists!\n");
+    }
+    if (-l $absto) {
+        # Broken link - possibly from an interrupted earlier run
+        unlink($absto);
+    }
+
+    # Check for graph file
+    $base = $absto;
+    $base =~ s/\.(gcda|da)$//;
+    if (!-e $base . ".gcno") {
+        die("No graph file found for $absfrom in " . dirname($base) . "!\n");
+    }
+
+    symlink($absfrom, $absto) or
+        die("could not create symlink at $absto: $!\n");
+}
+
+#
+# unlink_data_cb(datadir, rel, graphdir)
+#
+# Remove symbolic link from GRAPHDIR/REL to DATADIR/REL.
+#
+
+sub unlink_data_cb($$$)
+{
+    my ($datadir, $rel, $graphdir) = @_;
+    my $absfrom = catfile($datadir, $rel);
+    my $absto   = catfile($graphdir, $rel);
+    my $target;
+
+    return if (!-l $absto);
+    $target = readlink($absto);
+    return if (!defined($target) || $target ne $absfrom);
+
+    unlink($absto) or
+        warn("could not remove symlink $absto: $!\n");
+}
+
+#
+# link_data(datadir, graphdir, create)
+#
+# If CREATE is non-zero, create symbolic links in GRAPHDIR for data files
+# found in DATADIR. Otherwise remove link in GRAPHDIR.
+#
+
+sub link_data($$$)
+{
+    my ($datadir, $graphdir, $create) = @_;
+
+    $datadir  = abs_path($datadir);
+    $graphdir = abs_path($graphdir);
+    if ($create) {
+        lcov_find($datadir, \&link_data_cb, $graphdir, '\.gcda$', '\.da$');
+    } else {
+        lcov_find($datadir, \&unlink_data_cb, $graphdir, '\.gcda$', '\.da$');
+    }
+}
+
+#
+# find_graph_cb(datadir, rel, count_ref)
+#
+# Count number of files found.
+#
+
+sub find_graph_cb($$$)
+{
+    my ($dir, $rel, $count_ref) = @_;
+
+    ($$count_ref)++;
+}
+
+#
+# find_graph(dir)
+#
+# Search DIR for a graph file. Return non-zero if one was found, zero otherwise.
+#
+
+sub find_graph($)
+{
+    my ($dir) = @_;
+    my $count = 0;
+
+    lcov_find($dir, \&find_graph_cb, \$count, '\.gcno$');
+
+    return $count > 0 ? 1 : 0;
+}
+
+#
+# package_capture()
+#
+# Capture coverage data from a package of unprocessed coverage data files
+# as generated by lcov --to-package.
+#
+
+sub package_capture()
+{
+    my $dir;
+    my $build;
+    my $gkv;
+
+    ($dir, $build, $gkv) = get_package($from_package);
+
+    # Check for build directory
+    if (defined($base_directory)) {
+        if (defined($build)) {
+            info("Using build directory specified by -b.\n");
+        }
+        $build = $base_directory;
+    }
+
+    # Do the actual capture
+    if (defined($gkv)) {
+        if ($gkv == $GKV_SYS) {
+            $build = adjust_kernel_dir($dir, $build);
+        }
+        if (@kernel_directory) {
+            $dir = copy_gcov_dir($dir, @kernel_directory);
+        }
+        kernel_capture_from_dir($dir, $gkv, $build);
+    } else {
+        # Build directory needs to be passed to geninfo
+        $base_directory = $build;
+        if (find_graph($dir)) {
+            # Package contains graph files - collect from there
+            lcov_geninfo($dir);
+        } else {
+            # No graph files found, link data files next to
+            # graph files
+            link_data($dir, $base_directory, 1);
+            lcov_geninfo($base_directory);
+            link_data($dir, $base_directory, 0);
+        }
+    }
+}
+
+#
+# info(printf_parameter)
+#
+# Use printf to write PRINTF_PARAMETER to stdout only when the $quiet flag
+# is not set.
+#
+
+sub my_info(@)
+{
+    # Print info string
+    if (!$data_stdout) {
+        printf(@_);
+    } else {
+        # Don't interfere with the .info output to STDOUT
+        printf(STDERR @_);
+    }
+}
+
+# emit()
+#  write output to file or stdout - possibly with info message
+#  returns array of (lines found, lines hit, functions found, functions hit,
+#                    branches found, branches_hit)
+sub emit
+{
+    my ($trace, $info_msg) = @_;
+    my $to = $data_stdout ? '-' : $output_filename;
+    if (!$data_stdout) {
+        info($info_msg)
+            if $info_msg;
+        info("Writing data to $output_filename\n");
+    }
+    $trace->add_comments(@lcovutil::comments);
+    $trace->write_info_file($to, $lcovutil::verify_checksum);
+}
+
+#
+#
+# add_traces()
+#
+
+sub add_traces()
+{
+    info("Combining tracefiles.\n");
+    my @merge = AggregateTraces::find_from_glob(@add_tracefile);
+    info(".. found " . scalar(@merge) . " files to aggregate.\n");
+
+    my ($total_trace, $effective) =
+        AggregateTraces::merge(ReadCurrentSource->new(), @merge);
+
+    if ($AggregateTraces::function_mapping) {
+        return;
+    } elsif ($prune_testcases) {
+        return ($effective, \@merge);
+    } else {
+        # write the result
+        emit($total_trace);
+        return $total_trace;
+    }
+}
+
+#
+#
+# merge_traces()
+#
+
+sub merge_traces($$)
+{
+    my ($list, $op) = @_;
+    info(($op == TraceInfo::INTERSECT ? 'Intersect' : 'Subtract') .
+         " tracefiles.\n");
+
+    my @data = AggregateTraces::find_from_glob(@ARGV);
+    info('.. found: ' .
+         scalar(@data) . " 'base' trace file" .
+         (1 == scalar(@data) ? '' : 's') . ".\n");
+    die("must specify at lease one 'base' tracefile")
+        unless @data;
+    my @merge = AggregateTraces::find_from_glob(@$list);
+    info('          ' .
+         scalar(@merge) .
+         ' file' . (1 == scalar(@merge) ? '' : 's') . ' to ' .
+         ($op == TraceInfo::INTERSECT ? 'intersect' : 'subtract') . ".\n");
+
+    my $srcReader = ReadCurrentSource->new();
+    my ($base)    = AggregateTraces::merge($srcReader, @data);
+    my ($merge)   = AggregateTraces::merge($srcReader, @merge);
+
+    my $interesting = $base->merge_tracefile($merge, $op);
+    # write the result
+    emit($base);
+    return $base;
+}
+
+sub remove_file_patterns($)
+{
+    my $filename = shift;
+
+    my $readSourceFile = ReadCurrentSource->new();
+    my $now            = Time::HiRes::gettimeofday();
+    my $data =
+        TraceFile->load($filename, $readSourceFile, $lcovutil::verify_checksum);
+    my $then = Time::HiRes::gettimeofday();
+    $lcovutil::profileData{parse} = $then - $now;
+
+    # Write extracted data
+    my $removed = scalar(keys(%lcovutil::excluded_files));
+    emit($data, "Removed $removed files\n");
+    return $data;
+}
+
+# get_prefix(max_width, max_percentage_too_long, path_list)
+#
+# Return a path prefix that satisfies the following requirements:
+# - is shared by more paths in path_list than any other prefix
+# - the percentage of paths which would exceed the given max_width length
+#   after applying the prefix does not exceed max_percentage_too_long
+#
+# If multiple prefixes satisfy all requirements, the longest prefix is
+# returned. Return an empty string if no prefix could be found.
+
+sub get_prefix($$@)
+{
+    my ($max_width, $max_long, @path_list) = @_;
+    my $path;
+    my $ENTRY_NUM  = 0;
+    my $ENTRY_LONG = 1;
+    my %prefix;
+
+    # Build prefix hash
+    foreach $path (@path_list) {
+        my ($v, $d, $f) = splitpath($path);
+        my @dirs  = splitdir($d);
+        my $p_len = length($path);
+
+        # Remove trailing '/'
+        pop(@dirs)
+            if (0 != scalar(@dirs) && $dirs[scalar(@dirs) - 1] eq '');
+        for (my $i = 0; $i < scalar(@dirs); $i++) {
+            my $subpath = catpath($v, catdir(@dirs[0 .. $i]), '');
+            my $entry   = $prefix{$subpath};
+
+            $entry = [0, 0] if (!defined($entry));
+            $entry->[$ENTRY_NUM]++;
+            if (($p_len - length($subpath) - 1) > $max_width) {
+                $entry->[$ENTRY_LONG]++;
+            }
+            $prefix{$subpath} = $entry;
+        }
+    }
+    # Find suitable prefix (sort descending by two keys: 1. number of
+    # entries covered by a prefix, 2. length of prefix)
+    foreach $path (sort {
+                       ($prefix{$a}->[$ENTRY_NUM] == $prefix{$b}->[$ENTRY_NUM])
+                           ?
+                           length($b) <=> length($a) :
+                           $prefix{$b}->[$ENTRY_NUM]
+                           <=> $prefix{$a}->[$ENTRY_NUM]
+                   }
+                   keys(%prefix)
+    ) {
+        my ($num, $long) = @{$prefix{$path}};
+
+        # Check for additional requirement: number of filenames
+        # that would be too long may not exceed a certain percentage
+        if ($long <= $num * $max_long / 100) {
+            return $path;
+        }
+    }
+
+    return "";
+}
+
+#
+# shorten_filename(filename, width)
+#
+# Truncate filename if it is longer than width characters.
+#
+
+sub shorten_filename($$)
+{
+    my ($filename, $width) = @_;
+    my $l = length($filename);
+    my $s;
+    my $e;
+
+    return $filename if ($l <= $width);
+    $e = int(($width - 3) / 2);
+    $s = $width - 3 - $e;
+
+    return substr($filename, 0, $s) . '...' . substr($filename, $l - $e);
+}
+
+sub shorten_number($$)
+{
+    my ($number, $width) = @_;
+    my $result = sprintf("%*d", $width, $number);
+
+    return $result if (length($result) <= $width);
+    $number = $number / 1000;
+    return $result if (length($result) <= $width);
+    $result = sprintf("%*dk", $width - 1, $number);
+    return $result if (length($result) <= $width);
+    $number = $number / 1000;
+    $result = sprintf("%*dM", $width - 1, $number);
+    return $result if (length($result) <= $width);
+    return '#';
+}
+
+sub shorten_rate($$$)
+{
+    my ($hit, $found, $width) = @_;
+    my $result = rate($hit, $found, "%", 1, $width);
+
+    return $result if (length($result) <= $width);
+    $result = rate($hit, $found, "%", 0, $width);
+    return $result if (length($result) <= $width);
+    return "#";
+}
+
+#
+# list()
+#
+
+sub list()
+{
+    my $readSourceFile = ReadCurrentSource->new();
+    my $data =
+        TraceFile->load($list, $readSourceFile, $lcovutil::verify_checksum);
+    my $strlen = length("Filename");
+    my $lastpath;
+    my $F_LN_NUM      = 0;
+    my $F_LN_RATE     = 1;
+    my $F_FN_NUM      = 2;
+    my $F_FN_RATE     = 3;
+    my $F_BR_NUM      = 4;
+    my $F_BR_RATE     = 5;
+    my $F_MCDC_NUM    = 6;
+    my $F_MCDC_RATE   = 7;
+    my @fwidth_narrow = (5, 5, 3, 5, 4, 5, 4, 5);
+    my @fwidth_wide   = (6, 5, 5, 5, 6, 5, 6, 5);
+    my @fwidth        = @fwidth_wide;
+    my $max_width     = $opt_list_width;
+    my $max_long      = $opt_list_truncate_max;
+
+    # Calculate total width of narrow fields
+    my $fwidth_narrow_length = 0;
+    foreach my $w (@fwidth_narrow) {
+        $fwidth_narrow_length += $w + 1;
+    }
+    # Calculate total width of wide fields
+    my $fwidth_wide_length = 0;
+    foreach my $w (@fwidth_wide) {
+        $fwidth_wide_length += $w + 1;
+    }
+    # Get common file path prefix
+    my $prefix = get_prefix($max_width - $fwidth_narrow_length,
+                            $max_long, $data->files());
+    my $root_prefix = ($prefix eq rootdir());
+    my $got_prefix  = (length($prefix) > 0);
+    $prefix =~ s/$lcovutil::dirseparator$//;
+    # Get longest filename length
+    foreach my $filename ($data->files()) {
+        if (!$opt_list_full_path) {
+            if (!$got_prefix ||
+                !$root_prefix && !(($lcovutil::case_insensitive &&
+                                    $filename =~ s/^\Q$prefix\/\E//i) ||
+                                   (!$lcovutil::case_insensitive &&
+                                    $filename =~ s/^\Q$prefix\/\E//))
+            ) {
+                my ($v, $d, $f) = splitpath($filename);
+
+                $filename = $f;
+            }
+        }
+        # Determine maximum length of entries
+        if (length($filename) > $strlen) {
+            $strlen = length($filename);
+        }
+    }
+    if (!$opt_list_full_path) {
+
+        my $w = $fwidth_wide_length;
+        # Check if all columns fit into max_width characters
+        if ($strlen + $fwidth_wide_length > $max_width) {
+            # Use narrow fields
+            @fwidth = @fwidth_narrow;
+            $w      = $fwidth_narrow_length;
+            if (($strlen + $fwidth_narrow_length) > $max_width) {
+                # Truncate filenames at max width
+                $strlen = $max_width - $fwidth_narrow_length;
+            }
+        }
+        # Add some blanks between filename and fields if possible
+        my $blanks = int($strlen * 0.5);
+        $blanks = 4 if ($blanks < 4);
+        $blanks = 8 if ($blanks > 8);
+        if (($strlen + $w + $blanks) < $max_width) {
+            $strlen += $blanks;
+        } else {
+            $strlen = $max_width - $w;
+        }
+    }
+    # Filename
+    my $w        = $strlen;
+    my $format   = "%-${w}s|";
+    my $heading1 = sprintf("%*s|", $w, "");
+    my $heading2 = sprintf("%-*s|", $w, "Filename");
+    my $barlen   = $w + 1;
+
+    # name, total_found, total_hit, total_column_width, rate_column_width
+    my @types = (['Lines', \&TraceInfo::sum, 0, 0, $F_LN_NUM, $F_LN_RATE],
+                 [$lcovutil::func_coverage ? 'Functions' : undef,
+                  \&TraceInfo::func, 0, 0, $F_FN_NUM, $F_FN_RATE
+                 ],
+                 [$lcovutil::br_coverage ? 'Branches' : undef,
+                  \&TraceInfo::sumbr, 0, 0, $F_BR_NUM, $F_BR_RATE
+                 ],
+                 [$lcovutil::mcdc_coverage ? 'MC/DC' : undef,
+                  \&TraceInfo::mcdc, 0, 0, $F_MCDC_NUM, $F_MCDC_RATE
+                 ],);
+
+    my $sep = '';
+    foreach my $d (@types) {
+        my ($type, $cb, $found, $hit, $n, $r) = @$d;
+        next unless $type;
+        $w = $fwidth[$r];
+        $format   .= "$sep%${w}s ";
+        $heading1 .= sprintf("$sep%-*s ", $w + $fwidth[$n], $type);
+        $heading2 .= sprintf("$sep%-*s ", $w, "Rate");
+        $barlen += $w + 1;
+        # Number of coverpoints
+        $w = $fwidth[$n];
+        $format   .= "%${w}s";
+        $heading2 .= sprintf("%*s", $w, "Num");
+        $barlen += $w + 1;
+        $sep = '|';
+    }
+    --$barlen;    # no separator for last column
+                  # Line end
+    $format   .= "\n";
+    $heading1 .= "\n";
+    $heading2 .= "\n";
+
+    # Print heading
+    print($heading1);
+    print($heading2);
+    print(("=" x $barlen) . "\n");
+
+    # Print per file information
+    foreach my $filename (sort($data->files())) {
+        my $entry          = $data->data($filename);
+        my $print_filename = $entry->filename();
+        if (!$opt_list_full_path) {
+            my $p;
+
+            $print_filename = $filename;
+            if (!$got_prefix ||
+                !$root_prefix && !(($lcovutil::case_insensitive &&
+                                    $print_filename =~ s/^\Q$prefix\/\E//i) ||
+                                   (!$lcovutil::case_insensitive &&
+                                    $print_filename =~ s/^\Q$prefix\/\E//))
+            ) {
+                my ($v, $d, $f) = splitpath($filename);
+
+                $p = catpath($v, $d, "");
+                $p =~ s/$lcovutil::dirseparator$//;
+                $print_filename = $f;
+            } else {
+                $p = $prefix;
+            }
+
+            if (!defined($lastpath) || $lastpath ne $p) {
+                print("\n") if (defined($lastpath));
+                $lastpath = $p;
+                print("[$lastpath/]\n") if (!$root_prefix);
+            }
+            $print_filename = shorten_filename($print_filename, $strlen);
+        }
+        my @file_data;
+        push(@file_data, $print_filename);
+        foreach my $d (@types) {
+            my ($type, $cb, $total_found, $total_hit, $n, $r) = @$d;
+            next unless defined($type);
+            my $data = &{$cb}($entry);
+
+            my ($found, $hit) = $data->get_found_and_hit();
+            # add to totals
+            $d->[2] += $found, $d->[3] += $hit;
+
+            push(@file_data, shorten_rate($hit, $found, $fwidth[$r]));
+            push(@file_data, shorten_number($found, $fwidth[$n]));
+        }
+        # Print assembled line
+        printf($format, @file_data);
+    }
+
+    # Print separator
+    print(("=" x $barlen) . "\n");
+
+    # Assemble line parameters
+    my @footer;
+    push(@footer, sprintf("%*s", $strlen, "Total:"));
+    foreach my $d (@types) {
+        my ($type, $cb, $total_found, $total_hit, $n, $r) = @$d;
+        next unless defined($type);
+
+        push(@footer, shorten_rate($total_hit, $total_found, $fwidth[$r]));
+        push(@footer, shorten_number($total_found, $fwidth[$n]));
+    }
+    # Print assembled line
+    printf($format, @footer);
+}
+
+#
+# get_common_filename(filename1, filename2)
+#
+# Check for filename components which are common to FILENAME1 and FILENAME2.
+# Upon success, return
+#
+#   (common, path1, path2)
+#
+#  or 'undef' in case there are no such parts.
+#
+
+sub get_common_filename($$)
+{
+    my ($vol1, $dir1, $file1) = File::Spec->splitpath($_[0]);
+    my ($vol2, $dir2, $file2) = File::Spec->splitpath($_[1]);
+    my @list1 = ($vol1, File::Spec->splitdir($dir1), $file1);
+    my @list2 = ($vol2, File::Spec->splitdir($dir2), $file2);
+    my @result;
+
+    # Work in reverse order, i.e. beginning with the filename itself
+    while (
+        @list1 &&
+        @list2 &&
+        (   (!$lcovutil::case_insensitive && $list1[$#list1] eq $list2[$#list2])
+            ||
+            ($lcovutil::case_insensitive &&
+                lc($list1[$#list1]) eq lc($list2[$#list2])))
+    ) {
+        unshift(@result, pop(@list1));
+        pop(@list2);
+    }
+
+    # Did we find any similarities?
+    if (scalar(@result) > 0) {
+        return (File::Spec->catfile(@result),
+                File::Spec->catfile(@list1),
+                File::Spec->catfile(@list2));
+    } else {
+        return undef;
+    }
+}
+
+#
+# summary()
+#
+
+sub summary()
+{
+    my @merge = AggregateTraces::find_from_glob(@opt_summary);
+    info(1, "Summarize " . scalar(@merge) . " files...\n");
+
+    my ($total, $effective) =
+        AggregateTraces::merge(ReadCurrentSource->new(), @merge);
+    return $total;
+}
+
+sub setup_gkv_sys()
+{
+    system_no_output(3, "mount", "-t", "debugfs", "nodev", "/sys/kernel/debug");
+}
+
+sub setup_gkv_proc()
+{
+    if (system_no_output(3, "modprobe", "gcov_proc")) {
+        system_no_output(3, "modprobe", "gcov_prof");
+    }
+}
+
+sub check_gkv_sys($)
+{
+    my ($dir) = @_;
+
+    if (-e "$dir/reset") {
+        return 1;
+    }
+    return 0;
+}
+
+sub check_gkv_proc($)
+{
+    my ($dir) = @_;
+
+    if (-e "$dir/vmlinux") {
+        return 1;
+    }
+    return 0;
+}
+
+sub setup_gkv()
+{
+    my $dir;
+    my $sys_dir  = "/sys/kernel/debug/gcov";
+    my $proc_dir = "/proc/gcov";
+    my @todo;
+
+    if (!defined($gcov_dir)) {
+        info("Auto-detecting gcov kernel support.\n");
+        @todo = ("cs", "cp", "ss", "cs", "sp", "cp");
+    } elsif ($gcov_dir =~ /proc/) {
+        info("Checking gcov kernel support at $gcov_dir (user-specified).\n");
+        @todo = ("cp", "sp", "cp", "cs", "ss", "cs");
+    } else {
+        info("Checking gcov kernel support at $gcov_dir (user-specified).\n");
+        @todo = ("cs", "ss", "cs", "cp", "sp", "cp",);
+    }
+    foreach (@todo) {
+        if ($_ eq "cs") {
+            # Check /sys
+            $dir = defined($gcov_dir) ? $gcov_dir : $sys_dir;
+            if (check_gkv_sys($dir)) {
+                info("Found " .
+                     $GKV_NAME[$GKV_SYS] . " gcov kernel support at $dir\n");
+                return ($GKV_SYS, $dir);
+            }
+        } elsif ($_ eq "cp") {
+            # Check /proc
+            $dir = defined($gcov_dir) ? $gcov_dir : $proc_dir;
+            if (check_gkv_proc($dir)) {
+                info("Found " . $GKV_NAME[$GKV_PROC] .
+                     " gcov kernel support at $dir\n");
+                return ($GKV_PROC, $dir);
+            }
+        } elsif ($_ eq "ss") {
+            # Setup /sys
+            setup_gkv_sys();
+        } elsif ($_ eq "sp") {
+            # Setup /proc
+            setup_gkv_proc();
+        }
+    }
+    if (defined($gcov_dir)) {
+        die("could not find gcov kernel data at $gcov_dir\n");
+    } else {
+        die("no gcov kernel data found\n");
+    }
+}
