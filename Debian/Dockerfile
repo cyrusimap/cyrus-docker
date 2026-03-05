@@ -194,6 +194,9 @@ $CPANM \
   App::Cmd \
   Archive::Tar::Stream \
   Convert::Base64 \
+  Data::Printer::Filter::JMAP \
+  Data::Printer::Filter::JType \
+  Data::Printer::Filter::StructDumb \
   IO::File::fcntl \
   JMAP::Tester~0.109 \
   Mail::IMAPTalk \
