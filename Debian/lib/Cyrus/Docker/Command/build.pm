@@ -159,6 +159,12 @@ sub configure ($self, $opt) {
   my $libsdir = '/usr/local/cyruslibs';
   my $target  = '/usr/cyrus';
 
+  # The filename for xapian-config might end with a version string like "-N.N"
+  # if it's a development snapshot, the stable release has no trailing version.
+  # Prefer building with the stable release config if both exist.
+  my ($xapian_config) = sort glob("$libsdir/bin/xapian-config*");
+  die "No xapian-config binary found in $libsdir/bin\n" unless $xapian_config;
+
   my $more_cflags = $opt->cflags // "";
   my $more_cxxflags = $opt->cxxflags // "";
 
@@ -174,7 +180,7 @@ sub configure ($self, $opt) {
     './configure',
     "--prefix=$target",
     @configopts,
-    "XAPIAN_CONFIG=$libsdir/bin/xapian-config-1.5",
+    "XAPIAN_CONFIG=$xapian_config",
   );
 }
 
