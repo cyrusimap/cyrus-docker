@@ -53,6 +53,30 @@ sub execute ($self, $opt, $args) {
   system(qw(make), @jobs);
   Process::Status->assert_ok('Cassandane make');
 
+  # The Cassadene tests run as user cyrus, so that user needs to be able to
+  # write to existing coverage output files, and to create new output files for
+  # code not covered by CUnit tests
+  my $ownership = path($ENV{CYRUS_CLONE_ROOT} // '.')->visit(sub {
+    my ($path, $state) = @_;
+    return unless $path->is_file;
+    if ($path =~ /\.gcda\z/) {
+      # All existing *.gcda files might need to be updated
+      ++$state->{$path};
+    } elsif($path =~ m!\A(.*)/[^/]+\.gcno\z!) {
+      # All directories containing a *.gcno file might have new *.gcda files
+      # written, hence they need to be writable
+      ++$state->{$1};
+    }
+  }, {
+    recurse => 1,
+  });
+
+  my @to_chown = keys %$ownership;
+  if (@to_chown) {
+    system('chown', 'cyrus:mail', @to_chown);
+    Process::Status->assert_ok('chowning coverage files and directories');
+  }
+
   # The idea here is that if the user ran "cyd test Some::Test" then running
   # "make syntax" could add a lot of overhead in syntax checking.  If they're
   # testing *everything*, though, or "everything but three tests", then running
