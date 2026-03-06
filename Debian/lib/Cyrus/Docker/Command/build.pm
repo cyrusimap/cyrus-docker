@@ -21,13 +21,21 @@ sub abstract { 'configure, build, and install cyrus-imapd' }
 sub opt_spec {
   return (
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
-    [ 'cunit!', "run make check [-n to disable]", { default => 1 } ],
-    [ 'cunitfast|f', "run make check-fast instead of make check", { implies => { cunit => 0 } } ],
-    [ 'n', "hidden", { implies => { cunit => 0 } } ],
     [ 'with-sphinx|s', 'enable sphinx docs' ],
     [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
                      { default => 8 },
     ],
+
+    [ 'cunit-style' => hidden => { default => 'check_fast', one_of => [
+      [ 'check'          => 'run make check'                 ],
+      [ 'check-discrete' => 'run make check-discrete'        ],
+      [ 'check-fast'     => 'run make check-fast (default)', ],
+    ] } ],
+    [ 'n' => 'skip make check* step', { implies => { 'cunit_style' => '' } } ],
+
+    # back compat
+    [ 'cunit' => "hidden" => { implies => { 'cunit_style' => 'check' } } ],
+
     [ 'sanitizer' => hidden => { one_of => [
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
@@ -53,8 +61,13 @@ sub execute ($self, $opt, $args) {
 
   run(qw( make lex-fix                  ), @jobs);
   run(qw( make                          ), @jobs);
-  run(qw( make check                    ), @jobs)  if $opt->cunit;
-  run(qw( make check-fast               ), @jobs ) if $opt->cunitfast;
+
+  if (my $target = $opt->cunit_style) {
+    $target =~ s/_/-/;
+
+    run("make", $target, @jobs);
+  }
+
   run(qw( sudo make install             ), @jobs);
   run(qw( sudo make install-binsymlinks ), @jobs);
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
