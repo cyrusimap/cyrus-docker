@@ -40,7 +40,7 @@ sub opt_spec {
       [ 'asan'  => 'build with AddressSanitizer' ],
       [ 'ubsan' => 'build with UBSan' ],
       [ 'ubsan-trap' => 'build with UBSan and trap on error' ],
-      [ 'gcov'  => 'build with gcov' ],
+      [ 'cover'  => 'build with gcov' ],
     ] } ],
     [ 'compiler' => hidden => { one_of => [
       [ 'gcc' => 'gcc', ],
@@ -150,7 +150,7 @@ sub configure ($self, $opt) {
       if ($opt->sanitizer eq 'ubsan_trap') {
         $san_flags .= ' -fsanitize-undefined-trap-on-error';
       }
-    } elsif ($opt->sanitizer eq 'gcov') {
+    } elsif ($opt->sanitizer eq 'cover') {
       # lcov was fine without this, but gcovr needs it
       # Leaving it in, as other alternative tools we trial might want it too:
       $san_flags .= " -fprofile-abs-path";
