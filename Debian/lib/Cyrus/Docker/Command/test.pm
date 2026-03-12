@@ -56,7 +56,7 @@ sub execute ($self, $opt, $args) {
   # The Cassadene tests run as user cyrus, so that user needs to be able to
   # write to existing coverage output files, and to create new output files for
   # code not covered by CUnit tests
-  my $ownership = path($ENV{CYRUS_CLONE_ROOT} // '.')->visit(sub {
+  my $ownership = $self->app->repo_root->visit(sub {
     my ($path, $state) = @_;
     return unless $path->is_file;
     if ($path =~ /\.gcda\z/) {

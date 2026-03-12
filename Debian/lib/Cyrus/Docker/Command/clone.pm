@@ -9,14 +9,16 @@ use Process::Status;
 sub abstract { 'clone the cyrus-imapd source tree to /srv, if not present' }
 
 sub execute ($self, $opt, $arg) {
-  my $root = '/srv';
+  my $root = $self->app->repo_root;
   my $repo = 'https://github.com/cyrusimap/cyrus-imapd.git';
 
   # Not yet initialized.  Clone!
-  if (-d "$root/cyrus-imapd") {
-    say "$root/cyrus-imapd already exists, not cloning";
+  if ($root->exists) {
+    say "$root already exists, not cloning";
     return;
   }
+  my $parent = $root->parent;
+  chdir $parent or die "Can't chdir $parent: $!";
 
   system(qw(git clone -o github), $repo);
   Process::Status->assert_ok("cloning $repo");
