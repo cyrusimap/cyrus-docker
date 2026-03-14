@@ -143,6 +143,7 @@ apt-get -y install --no-install-recommends \
     libwww-perl \
     `# BEGIN for building docs` \
     libpod-pom-view-restructured-perl \
+    python3-breathe \
     python3-git \
     python3-sphinx \
     python3-sphinx-rtd-theme \
