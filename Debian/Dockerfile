@@ -275,7 +275,9 @@ make -j 8
 EOF
 
 # This determines what branch (head or tag) we use to build cyruslibs.
-ARG CYRUSLIBS_BRANCH=master
+# XXX - Temporarily pin at v79, v80 is bad
+# ARG CYRUSLIBS_BRANCH=master
+ARG CYRUSLIBS_BRANCH=cyruslibs-fastmail-v79
 
 RUN <<EOF
 # clone and build cyruslibs
