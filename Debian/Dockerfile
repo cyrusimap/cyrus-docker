@@ -293,6 +293,9 @@ EOF
 COPY bin /srv/bin
 COPY lib /srv/lib
 
+# Keeping this here for a bit so older cyrus-imapd CI test runs succeed
+# but it's no longer needed going forward as test output is in /dev/shm/cass
+# now.
 RUN mkdir /tmp/cass && chown cyrus:mail /tmp/cass
 
 ADD dot.bashrc /root/.bashrc

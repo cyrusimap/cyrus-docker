@@ -98,8 +98,11 @@ When you want to clean up the container you've got running, run "dar prune".
 The default image is ghcr.io/cyrusimap/cyrus-docker:bookworm (or bookworm-arm
 on ARM64), but you can set a different default for all your uses of "dar" by
 creating the file ~/.cyrus-docker/config, which should contain a JSON object.
-The only meaningful key, for now, is "default_image", which provides an
-alternate default image.
+The only meaningful keys, for now, are "default_image", which provides an
+alternate default image, and "shm_size", which should specify the size of
+/dev/shm (instead of dar's default of 4GB). A single cass run takes about
+1.3GB of space, so 4GB gives us room to grow and for reruns in the same image.
+
 END
 
 my $command = @ARGV ? shift(@ARGV) : 'commands';
@@ -247,6 +250,8 @@ END
     die "❌ This container is too old for this version of dar.\n";
   }
 
+  my $shm_size = $CONFIG->{shm_size} // "4GB";
+
   run(
     [
       'docker', 'run',
@@ -255,6 +260,7 @@ END
       '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
       ($opt_keep ? () : '--rm'),
       '--cap-add=SYS_PTRACE',
+      '--shm-size', $shm_size,
       $image_specifier,
       qw( cyd idle )
     ],
