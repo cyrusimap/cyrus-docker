@@ -5,7 +5,7 @@ use Cyrus::Docker -command;
 
 use Process::Status;
 
-sub abstract { 'make the docs site using Sphinx' }
+sub abstract { 'make the docs tree using Sphinx' }
 
 sub execute ($self, $opt, $args) {
   my $root = $self->app->repo_root->child('docsrc');
@@ -13,6 +13,7 @@ sub execute ($self, $opt, $args) {
 
   # I would prefer to use long form options, but they are not added until
   # Sphinx v7, and we are using v5 right now. -- rjbs, 2025-01-10
+  # trixie packages Sphinx v8
   #
   # -n is "--nitpicky"
   # -W is "--fail-on-warning"
