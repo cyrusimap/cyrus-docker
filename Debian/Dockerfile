@@ -202,8 +202,8 @@ $CPANM \
   IO::File::fcntl \
   JMAP::Tester~0.109 \
   Mail::IMAPTalk \
-  Net::CalDAVTalk \
-  Net::CardDAVTalk \
+  Net::CalDAVTalk~0.14 \
+  Net::CardDAVTalk~0.11 \
   Process::Status \
   Test::Unit~0.29 \
   Test::Deep::Hashbag
