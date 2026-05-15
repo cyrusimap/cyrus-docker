@@ -24,11 +24,11 @@ $ docker build -t <image-name> .
 
 where `<image-name>` could be anything you like. Because the current OCI
 image is based on [Debian
-"bookworm"](https://www.debian.org/releases/bookworm/), we would typically run
+"trixie"](https://www.debian.org/releases/trixie/), we would typically run
 it as:
 
 ```
-$ docker build -t cyrus-bookworm .
+$ docker build -t cyrus-trixie .
 ```
 
 ..and let Docker do its thing.

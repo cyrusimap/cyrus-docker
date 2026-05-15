@@ -95,7 +95,7 @@ use "dar run ..." to run that "..." in the container, for non-cyd commands.
 
 When you want to clean up the container you've got running, run "dar prune".
 
-The default image is ghcr.io/cyrusimap/cyrus-docker:bookworm (or bookworm-arm
+The default image is ghcr.io/cyrusimap/cyrus-docker:trixie (or trixie-arm
 on ARM64), but you can set a different default for all your uses of "dar" by
 creating the file ~/.cyrus-docker/config, which should contain a JSON object.
 The only meaningful keys, for now, are "default_image", which provides an
@@ -407,7 +407,7 @@ sub _requested_image ($class, $opt_image) {
 
   return $opt_image
       // $CONFIG->{default_image}
-      // "ghcr.io/cyrusimap/cyrus-docker:bookworm$suffix";
+      // "ghcr.io/cyrusimap/cyrus-docker:trixie$suffix";
 }
 
 sub _get_image ($class, $image_specifier) {
