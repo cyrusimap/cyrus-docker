@@ -202,7 +202,6 @@ $CPANM \
   IO::File::fcntl \
   JMAP::Tester~0.109 \
   Mail::IMAPTalk \
-  Text::JSCalendar@0.03 \
   Net::CalDAVTalk~0.14 \
   Net::CardDAVTalk~0.11 \
   Process::Status \
