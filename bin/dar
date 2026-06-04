@@ -214,21 +214,6 @@ END
     END
   }
 
-  # We mount the repository root, so a worktree outside it wouldn't be present
-  # in the container.
-  if ($ctx->{is_worktree}) {
-    my $top  = "$ctx->{toplevel}";
-    my $root = "$ctx->{repo_root}";
-
-    unless (index("$top/", "$root/") == 0) {
-      die <<~"END";
-      ❌ This worktree ($top)
-      lives outside its repository ($root).
-      dar only supports worktrees located inside the repository directory.
-      END
-    }
-  }
-
   my $existing_container = $class->_existing_container;
 
   if ($existing_container) {
@@ -293,18 +278,32 @@ END
 
   my $shm_size = $CONFIG->{shm_size} // "4GB";
 
+  my @mounts = (
+    '--mount', "type=bind,src=$ctx->{repo_root},dst=$ctx->{mount_dst}",
+  );
+
+  # A worktree outside the repository directory isn't covered by the repo
+  # mount, so it gets a second mount, also at its host path; git's absolute
+  # links don't care that the two trees arrive separately. -- claude, 2026-06-04
+  if ($ctx->{is_worktree} && $ctx->{is_outside}) {
+    push @mounts,
+      '--mount', "type=bind,src=$ctx->{toplevel},dst=$ctx->{clone_root}";
+  }
+
   my @clone_root_env = $ctx->{is_worktree}
     ? ('--env', "CYRUS_CLONE_ROOT=$ctx->{clone_root}")
     : ();
+
+  my $worktree_label = $ctx->{is_worktree} ? $ctx->{clone_root} : q{};
 
   run(
     [
       'docker', 'run',
       '--detach',
       '--name', $name,
-      '--mount', "type=bind,src=$ctx->{repo_root},dst=$ctx->{mount_dst}",
+      @mounts,
       '--label', "org.cyrusimap.dar.repo=$ctx->{repo_root}",
-      '--label', "org.cyrusimap.dar.worktree=$ctx->{subpath}",
+      '--label', "org.cyrusimap.dar.worktree=$worktree_label",
       @clone_root_env,
       ($opt_keep ? () : '--rm'),
       '--cap-add=SYS_PTRACE',
@@ -409,8 +408,8 @@ sub _prune_worktrees ($class) {
   }
 
   for my $container (@worktrees) {
-    my $subpath = $class->_label($container, 'org.cyrusimap.dar.worktree');
-    say "⏳ Removing $container->{Names} (worktree: $subpath)...";
+    my $wt_path = $class->_label($container, 'org.cyrusimap.dar.worktree');
+    say "⏳ Removing $container->{Names} (worktree: $wt_path)...";
     $class->_stop_and_remove($container);
   }
 
@@ -427,11 +426,11 @@ sub _report_remaining_worktrees ($class, $ctx) {
     scalar @worktrees, (@worktrees == 1 ? q{} : 's');
 
   for my $container (sort { $a->{Names} cmp $b->{Names} } @worktrees) {
-    my $subpath = $class->_label($container, 'org.cyrusimap.dar.worktree');
-    my $live    = -d $ctx->{repo_root}->child($subpath);
+    my $wt_path = $class->_label($container, 'org.cyrusimap.dar.worktree');
+    my $live    = -d $wt_path;
     say sprintf '   • %s  (%s)  %s',
       $container->{Names},
-      $subpath,
+      $wt_path,
       ($live ? 'live' : 'orphaned — worktree gone');
   }
 
@@ -597,7 +596,6 @@ sub _repo_context ($class) {
       +{
         repo_root   => $ABS_CWD,
         toplevel    => $ABS_CWD,
-        subpath     => q{},
         is_worktree => 0,
         mount_dst   => '/srv/cyrus-imapd',
         clone_root  => '/srv/cyrus-imapd',
@@ -610,7 +608,6 @@ sub _repo_context ($class) {
       my %context = (
         repo_root   => $repo_root,
         toplevel    => $top,
-        subpath     => $is_wt ? $top->relative($repo_root)->stringify : q{},
         is_worktree => $is_wt,
       );
 
@@ -622,6 +619,7 @@ sub _repo_context ($class) {
       if ($is_wt) {
         $context{mount_dst}  = "$repo_root";
         $context{clone_root} = "$top";
+        $context{is_outside} = index("$top/", "$repo_root/") != 0;
       } else {
         $context{mount_dst}  = '/srv/cyrus-imapd';
         $context{clone_root} = '/srv/cyrus-imapd';
