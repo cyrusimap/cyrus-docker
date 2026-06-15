@@ -12059,6 +12059,7 @@ Run "dar COMMAND".  Here are some commands:
  • pull      - pull the latest OCI container image
  • start     - start a container to build in the current dir
  • prune     - stop and destroy the container for this dir
+               (pass --worktrees to destroy this repo's worktree containers)
  • help      - get more information about how to use dar
  • run       - run the given command in the container
  • cyd       - a shortcut for "dar run cyd ..."
@@ -12095,8 +12096,11 @@ When you want to clean up the container you've got running, run "dar prune".
 The default image is ghcr.io/cyrusimap/cyrus-docker:bookworm (or bookworm-arm
 on ARM64), but you can set a different default for all your uses of "dar" by
 creating the file ~/.cyrus-docker/config, which should contain a JSON object.
-The only meaningful key, for now, is "default_image", which provides an
-alternate default image.
+The only meaningful keys, for now, are "default_image", which provides an
+alternate default image, and "shm_size", which should specify the size of
+/dev/shm (instead of dar's default of 4GB). A single cass run takes about
+1.3GB of space, so 4GB gives us room to grow and for reruns in the same image.
+
 END
 
 my $command = @ARGV ? shift(@ARGV) : 'commands';
@@ -12182,6 +12186,31 @@ anyway, pass the --run-outside-clone switch.
 END
   }
 
+  my $ctx = $class->_repo_context;
+
+  # We mount worktrees at their host path so their absolute links into .git
+  # resolve.  That means we neither need nor can tolerate the relativeWorktrees
+  # extension (git 2.48+), which the container's older git rejects outright -- it
+  # refuses every operation on the repo, including the "git describe" the build
+  # needs, whether or not we're in a worktree.
+  #
+  # We can fix this when we're on post-Trixie Debian, maybe, or if we install
+  # our own git into the container.
+  if ($ctx->{has_relative_extension}) {
+    my $root = $ctx->{repo_root};
+    die <<~"END";
+    ❌ This repository uses the relativeWorktrees extension, which the
+    container's git is too old to understand.  dar mounts worktrees at their
+    host path, so absolute worktree links work without it.  Remove it with:
+
+        git -C $root config --unset extensions.relativeWorktrees
+        git -C $root config --unset worktree.useRelativePaths
+        git -C $root worktree repair
+
+    Then run "dar start" again.
+    END
+  }
+
   my $existing_container = $class->_existing_container;
 
   if ($existing_container) {
@@ -12244,14 +12273,38 @@ END
     die "❌ This container is too old for this version of dar.\n";
   }
 
+  my $shm_size = $CONFIG->{shm_size} // "4GB";
+
+  my @mounts = (
+    '--mount', "type=bind,src=$ctx->{repo_root},dst=$ctx->{mount_dst}",
+  );
+
+  # A worktree outside the repository directory isn't covered by the repo
+  # mount, so it gets a second mount, also at its host path; git's absolute
+  # links don't care that the two trees arrive separately. -- claude, 2026-06-04
+  if ($ctx->{is_worktree} && $ctx->{is_outside}) {
+    push @mounts,
+      '--mount', "type=bind,src=$ctx->{toplevel},dst=$ctx->{clone_root}";
+  }
+
+  my @clone_root_env = $ctx->{is_worktree}
+    ? ('--env', "CYRUS_CLONE_ROOT=$ctx->{clone_root}")
+    : ();
+
+  my $worktree_label = $ctx->{is_worktree} ? $ctx->{clone_root} : q{};
+
   run(
     [
       'docker', 'run',
       '--detach',
       '--name', $name,
-      '--mount', "type=bind,src=$ABS_CWD,dst=/srv/cyrus-imapd",
+      @mounts,
+      '--label', "org.cyrusimap.dar.repo=$ctx->{repo_root}",
+      '--label', "org.cyrusimap.dar.worktree=$worktree_label",
+      @clone_root_env,
       ($opt_keep ? () : '--rm'),
       '--cap-add=SYS_PTRACE',
+      '--shm-size', $shm_size,
       $image_specifier,
       qw( cyd idle )
     ],
@@ -12277,10 +12330,21 @@ END
   # directory safe. -- rjbs, 2024-12-27
   run([
     qw( docker exec ), $container->{ID},
-    qw( git config --global --add safe.directory /srv/cyrus-imapd ),
+    qw( git config --global --add safe.directory ), $ctx->{mount_dst},
   ]);
 
   Process::Status->assert_ok("❌ Fixing git permissions in container");
+
+  # git's "dubious ownership" check is per-directory, so marking the repo root
+  # safe isn't enough for a worktree living in a subdirectory of it.
+  if ($ctx->{is_worktree}) {
+    run([
+      qw( docker exec ), $container->{ID},
+      qw( git config --global --add safe.directory ), $ctx->{clone_root},
+    ]);
+
+    Process::Status->assert_ok("❌ Fixing git worktree permissions in container");
+  }
 
   my $config_file = path('~/.cyrus-docker/config');
   if (-e $config_file) {
@@ -12304,7 +12368,14 @@ END
 }
 
 sub do_prune ($class, $args) {
-  @$args && die "❌ You can't supply a command to run with --prune.\n";
+  die "error parsing arguments!\n" unless Getopt::Long::GetOptionsFromArray(
+    $args,
+    'worktrees' => \my $opt_worktrees,
+  );
+
+  @$args && die "❌ You can't supply a command to run with prune.\n";
+
+  return $class->_prune_worktrees if $opt_worktrees;
 
   my $container = $class->_existing_container;
 
@@ -12313,13 +12384,64 @@ sub do_prune ($class, $args) {
     return;
   }
 
+  $class->_stop_and_remove($container);
+  say "✅ Container stopped and removed.";
+
+  # If we just pruned the main checkout's container, point out any worktree
+  # containers still hanging around -- including orphans, whose worktrees are
+  # gone and so can't be pruned by cd-ing into them.
+  my $ctx = $class->_repo_context;
+  $class->_report_remaining_worktrees($ctx) unless $ctx->{is_worktree};
+}
+
+sub _prune_worktrees ($class) {
+  my $ctx = $class->_repo_context;
+
+  my @worktrees = $class->_worktree_containers($ctx->{repo_root});
+
+  unless (@worktrees) {
+    say "✅ No worktree containers to clean up.";
+    return;
+  }
+
+  for my $container (@worktrees) {
+    my $wt_path = $class->_label($container, 'org.cyrusimap.dar.worktree');
+    say "⏳ Removing $container->{Names} (worktree: $wt_path)...";
+    $class->_stop_and_remove($container);
+  }
+
+  say sprintf '✅ Removed %d worktree container%s.',
+    scalar @worktrees, (@worktrees == 1 ? q{} : 's');
+}
+
+sub _report_remaining_worktrees ($class, $ctx) {
+  my @worktrees = $class->_worktree_containers($ctx->{repo_root});
+
+  return unless @worktrees;
+
+  say sprintf 'ℹ️  %d worktree container%s still exist for this repo:',
+    scalar @worktrees, (@worktrees == 1 ? q{} : 's');
+
+  for my $container (sort { $a->{Names} cmp $b->{Names} } @worktrees) {
+    my $wt_path = $class->_label($container, 'org.cyrusimap.dar.worktree');
+    my $live    = -d $wt_path;
+    say sprintf '   • %s  (%s)  %s',
+      $container->{Names},
+      $wt_path,
+      ($live ? 'live' : 'orphaned — worktree gone');
+  }
+
+  say q{   Run "dar prune --worktrees" to remove them.};
+}
+
+sub _stop_and_remove ($class, $container) {
   run(
     [ qw( docker inspect ), $container->{ID} ],
     _emptyref(),
     \my $inspect_json,
   );
 
-  Process::Status->assert_ok("❌ Inspecting stopped container");
+  Process::Status->assert_ok("❌ Inspecting container");
 
   my $inspect = decode_json($inspect_json);
   my $autoremove = $inspect->[0]{HostConfig}{AutoRemove};
@@ -12330,10 +12452,9 @@ sub do_prune ($class, $args) {
     _emptyref(),
   );
 
-  Process::Status->assert_ok("❌ Stopping existing container");
+  Process::Status->assert_ok("❌ Stopping container");
 
   if ($autoremove) {
-    say "✅ Container stopped, now waiting for removal...";
     while (1) {
       run([ qw(docker inspect), $container->{ID} ], _emptyref(), _emptyref(), _emptyref());
       last if $? != 0;
@@ -12385,8 +12506,10 @@ sub do_run ($class, $args) {
 
   my @switches = $IS_TTY ? ('--tty', '--interactive') : ();
 
+  my $ctx = $class->_repo_context;
+
   exec(
-    qw( docker exec --workdir /srv/cyrus-imapd ), @switches,
+    qw( docker exec --workdir ), $ctx->{clone_root}, @switches,
     $container->{ID},
     @$args,
   );
@@ -12442,6 +12565,108 @@ sub _existing_container ($class) {
 sub container_name_for_cwd {
   my $digest = sha1_hex("$ABS_CWD");
   return "cyd-" . substr($digest, 0, 12);
+}
+
+sub _git_capture ($class, @args) {
+  run([ 'git', @args ], _emptyref(), \my $out, _emptyref());
+  return undef if $?;
+  chomp $out;
+  return $out;
+}
+
+# Describe the cwd in terms of the repository dar should mount, and where that
+# mount lands inside the container.  For a normal checkout the repo root *is*
+# the cwd and we mount it at /srv/cyrus-imapd.  For a git worktree, the repo
+# root is the main checkout (where the real .git lives) and we mount it at its
+# *host* path, so the worktree's absolute link into .git resolves with the
+# container's older git; CYRUS_CLONE_ROOT then points cyd at the worktree
+# itself.
+sub _repo_context ($class) {
+  state $ctx = do {
+    my $toplevel  = $class->_git_capture(qw( rev-parse --show-toplevel ));
+    my $commondir = $class->_git_capture(
+      qw( rev-parse --path-format=absolute --git-common-dir )
+    );
+
+    (defined $toplevel && defined $commondir)
+      ? $class->_worktree_context($toplevel, $commondir)
+      : $class->_toplevel_context;
+  };
+
+  return $ctx;
+}
+
+sub _worktree_context ($class, $toplevel, $commondir) {
+  my $repo_root = path($commondir)->parent->absolute;
+  my $top       = path($toplevel)->absolute;
+  my $is_wt     = "$top" ne "$repo_root";
+
+  my %context = (
+    repo_root   => $repo_root,
+    toplevel    => $top,
+    is_worktree => $is_wt,
+  );
+
+  my $ext = $class->_git_capture(
+    qw( config --get extensions.relativeWorktrees )
+  );
+  $context{has_relative_extension} = (defined $ext && $ext eq 'true') ? 1 : 0;
+
+  if ($is_wt) {
+    $context{mount_dst}  = "$repo_root";
+    $context{clone_root} = "$top";
+    $context{is_outside} = index("$top/", "$repo_root/") != 0;
+  } else {
+    $context{mount_dst}  = '/srv/cyrus-imapd';
+    $context{clone_root} = '/srv/cyrus-imapd';
+  }
+
+  \%context;
+}
+
+sub _toplevel_context ($class) {
+  # Not in a git work tree (e.g. dar --run-outside-clone); mount the cwd.
+  +{
+    repo_root   => $ABS_CWD,
+    toplevel    => $ABS_CWD,
+    is_worktree => 0,
+    mount_dst   => '/srv/cyrus-imapd',
+    clone_root  => '/srv/cyrus-imapd',
+  };
+}
+
+# All "-a" containers labelled as a worktree (non-empty worktree label) of the
+# given repo root.  The main checkout's container carries an empty worktree
+# label, so it's excluded.
+sub _worktree_containers ($class, $repo_root) {
+  run(
+    [
+      qw( docker container list -a ),
+      '--filter', "label=org.cyrusimap.dar.repo=$repo_root",
+      '--format', 'json',
+    ],
+    _emptyref(),
+    \my $out,
+  );
+
+  Process::Status->assert_ok("❌ Listing repo containers");
+
+  chomp $out;
+  return unless length $out;
+
+  return
+    grep {; length($class->_label($_, 'org.cyrusimap.dar.worktree') // q{}) }
+    map  {; decode_json($_) }
+    split /\n/, $out;
+}
+
+sub _label ($class, $container, $key) {
+  my $labels = $container->{Labels} // q{};
+  for my $pair (split /,/, $labels) {
+    my ($k, $v) = split /=/, $pair, 2;
+    return $v if defined $k && $k eq $key;
+  }
+  return undef;
 }
 
 sub load_config {
