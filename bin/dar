@@ -591,45 +591,51 @@ sub _repo_context ($class) {
       qw( rev-parse --path-format=absolute --git-common-dir )
     );
 
-    unless (defined $toplevel && defined $commondir) {
-      # Not in a git work tree (e.g. dar --run-outside-clone); mount the cwd.
-      +{
-        repo_root   => $ABS_CWD,
-        toplevel    => $ABS_CWD,
-        is_worktree => 0,
-        mount_dst   => '/srv/cyrus-imapd',
-        clone_root  => '/srv/cyrus-imapd',
-      };
-    } else {
-      my $repo_root = path($commondir)->parent->absolute;
-      my $top       = path($toplevel)->absolute;
-      my $is_wt     = "$top" ne "$repo_root";
-
-      my %context = (
-        repo_root   => $repo_root,
-        toplevel    => $top,
-        is_worktree => $is_wt,
-      );
-
-      my $ext = $class->_git_capture(
-        qw( config --get extensions.relativeWorktrees )
-      );
-      $context{has_relative_extension} = (defined $ext && $ext eq 'true') ? 1 : 0;
-
-      if ($is_wt) {
-        $context{mount_dst}  = "$repo_root";
-        $context{clone_root} = "$top";
-        $context{is_outside} = index("$top/", "$repo_root/") != 0;
-      } else {
-        $context{mount_dst}  = '/srv/cyrus-imapd';
-        $context{clone_root} = '/srv/cyrus-imapd';
-      }
-
-      \%context;
-    }
+    (defined $toplevel && defined $commondir)
+      ? $class->_worktree_context($toplevel, $commondir)
+      : $class->_toplevel_context;
   };
 
   return $ctx;
+}
+
+sub _worktree_context ($class, $toplevel, $commondir) {
+  my $repo_root = path($commondir)->parent->absolute;
+  my $top       = path($toplevel)->absolute;
+  my $is_wt     = "$top" ne "$repo_root";
+
+  my %context = (
+    repo_root   => $repo_root,
+    toplevel    => $top,
+    is_worktree => $is_wt,
+  );
+
+  my $ext = $class->_git_capture(
+    qw( config --get extensions.relativeWorktrees )
+  );
+  $context{has_relative_extension} = (defined $ext && $ext eq 'true') ? 1 : 0;
+
+  if ($is_wt) {
+    $context{mount_dst}  = "$repo_root";
+    $context{clone_root} = "$top";
+    $context{is_outside} = index("$top/", "$repo_root/") != 0;
+  } else {
+    $context{mount_dst}  = '/srv/cyrus-imapd';
+    $context{clone_root} = '/srv/cyrus-imapd';
+  }
+
+  \%context;
+}
+
+sub _toplevel_context ($class) {
+  # Not in a git work tree (e.g. dar --run-outside-clone); mount the cwd.
+  +{
+    repo_root   => $ABS_CWD,
+    toplevel    => $ABS_CWD,
+    is_worktree => 0,
+    mount_dst   => '/srv/cyrus-imapd',
+    clone_root  => '/srv/cyrus-imapd',
+  };
 }
 
 # All "-a" containers labelled as a worktree (non-empty worktree label) of the
