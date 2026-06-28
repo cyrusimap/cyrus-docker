@@ -70,6 +70,7 @@ Run "dar COMMAND".  Here are some commands:
 And these commands all run "dar cyd CMD" in the container:
  • build     - configure and compile Cyrus
  • clean     - "make clean" the repo
+ • coverage  - generate code coverage
  • distcheck - build and test a Cyrus IMAP distribution
  • makedocs  - build the html version of the docs
  • shell     - run a shell
@@ -470,7 +471,7 @@ sub _stop_and_remove ($class, $container) {
 }
 
 BEGIN {
-  for my $cyd_cmd (qw( build clean distcheck makedocs shell smoke test )) {
+  for my $cyd_cmd (qw( build clean coverage distcheck makedocs shell smoke test )) {
     my $code = sub ($class, $args) {
       $class->do_run([ 'cyd', $cyd_cmd, @$args ]);
     };
