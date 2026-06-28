@@ -16,6 +16,20 @@ my sub run (@args) {
 
 sub abstract { 'do a distcheck against cyrus-imapd' }
 
+sub description {
+  return <<~'END';
+  Build a release tarball with "make distcheck", then unpack it somewhere clean
+  and build and test *that* with cyd build / cyd test.  This is how we confirm
+  the dist tarball is self-contained and that a from-tarball build (the path a
+  packager or end user takes) actually works.
+
+  By default it insists the checkout be clean; pass --dirty to distcheck a dirty
+  tree on purpose (and it will then insist the tree *is* dirty, to catch
+  mistakes).  Use --brief to stop after "make distcheck" without testing the
+  unpacked tarball.
+  END
+}
+
 sub opt_spec {
   return (
     [ 'jobs|j=i', 'specify number of parallel jobs (default: 8) to run for make',
@@ -70,7 +84,12 @@ sub execute ($self, $opt, $args) {
   my ($tarball) = glob("cyrus-imapd-*-g${commit}*${dirty}.tar.gz");
 
   unless ($tarball) {
-    die "Can't find the tarball we should've just built!\n";
+    die <<~'END'
+    Can't find the tarball we should've just built!  This often means that you
+    had a stale configure result, and built for the configured version, not the
+    version that tools/git-version.sh would now produce.
+
+    END
   }
 
   my $full_tarball_path = File::Spec->catfile($root, $tarball);

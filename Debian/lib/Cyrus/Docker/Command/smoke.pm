@@ -7,6 +7,14 @@ use Process::Status;
 
 sub abstract { 'build and test the contents of cyrus-imapd repo' }
 
+sub description {
+  return <<~'END';
+  The all-in-one shortcut: clone (if needed), clean, build, and test.  CI runs
+  effectively this: cyd build, then cyd test.  smoke is a good single command
+  to confirm a checkout is healthy.
+  END
+}
+
 sub execute ($self, $opt, $args) {
   my @classes = qw(
     Cyrus::Docker::Command::clone

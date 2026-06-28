@@ -7,6 +7,15 @@ use Process::Status;
 
 sub abstract { 'make the docs tree using Sphinx' }
 
+sub description {
+  return <<~'END';
+  Build the cyrus-imapd documentation site (docsrc/) with Sphinx, writing HTML
+  to docsrc/build/html.  This is the right way to preview documentation changes
+  locally.  The build runs nitpicky and warnings-as-errors (-n -W), so a doc
+  change that builds clean here will build clean in CI.
+  END
+}
+
 sub execute ($self, $opt, $args) {
   my $root = $self->app->repo_root->child('docsrc');
   chdir $root or die "can't chdir to $root: $!";
