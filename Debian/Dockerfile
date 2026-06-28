@@ -1,13 +1,47 @@
+# =============================================================================
+# Cyrus IMAP development image (Debian)
+#
+# This Dockerfile builds "cyrus-docker", the image the Cyrus team uses for CI
+# and for local development.  It is also meant to be *read*: the Cyrus developer
+# documentation points here instead of maintaining a second list of build and
+# test dependencies
+#
+# So, if you are setting up to build Cyrus somewhere other than this image --
+# another distro, or bare metal -- this file is the authoritative answer to
+# "what do I need?".  It's Debian-based, so you'll have to translate package
+# names to your own system, but nothing required should be hidden elsewhere.
+#
+# The build proceeds in stages:
+#
+#   1. install Debian packages: the C build toolchain, the libraries Cyrus
+#      links against, and the Perl modules Cassandane needs
+#   2. create the "cyrus" user/group and minimal system config
+#   3. fetch and build the external test tools we pin to known-good commits
+#      (CalDAVTester, Dovecot, imaptest, JMAP-TestSuite)
+#   4. build cyruslibs: libraries at versions newer than Debian ships
+#   5. install "cyd", the in-container tooling, under /srv/bin
+#
+# Note that the build/test/coverage *steps* themselves live in cyd, not here.
+# If you want to know exactly how Cyrus is configured, built, and tested, then
+# read lib/Cyrus/Docker/Command/*.pm -- e.g. the reference ./configure
+# invocation lives in Command/build.pm.
+# =============================================================================
+
 # If you change the default source image, update the README, which references
 # the underlying Debian version.
 ARG DEBIAN_VERSION=bookworm
 FROM debian:$DEBIAN_VERSION
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
-
 LABEL org.cyrusimap.cyrus-docker.version="1.0"
 
 RUN <<EOF
 # install prerequisites via apt-get
+#
+# This list is deliberately a superset.  The unlabelled packages below are the
+# C build toolchain, the libraries Cyrus links against, and the core Perl
+# modules Cassandane needs to run.  The `# BEGIN ...` markers further down group
+# packages added for specific purposes (extra Cassandane/Cyrus prereqs, the
+# JMAP test suite, building the docs, and quality-of-life tools).
 set -e
 apt-get update
 apt-get -y install build-essential
@@ -158,12 +192,14 @@ EOF
 
 RUN <<EOF
 # set up users, groups, and config
+#
+# Cyrus expects to runs as the unprivileged "cyrus" user.  The important things
+# are that it run as a non-root user in the groups "mail" and in "saslauth".
 set -e
 groupadd -r saslauth
 
 # The "mail" group exists on stock Debian, we don't need to add it here.
 # groupadd -r mail
-
 useradd -c "Cyrus IMAP Server" -d /var/lib/imap -g mail -G saslauth -s /bin/bash -r cyrus
 
 git config --global http.sslverify false
@@ -178,6 +214,10 @@ WORKDIR /srv
 
 RUN <<EOF
 # clone CalDAVTester
+#
+# This isn't needed to run Cyrus, it's a Cyrus's fork of the (possibly
+# abandoned?) Apple Calendar and Contacts Server's CAlDAVTester test suite.
+# We'll test Cyrus builds against this.
 git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/CalDAVTester.git
 EOF
 
@@ -192,6 +232,9 @@ ARG CLEANUP=true
 
 RUN <<EOF
 # install Perl prerequisites from CPAN
+#
+# This is generally stuff not found in Debian, or where we need a newer
+# version.
 set -e
 $CPANM \
   App::Cmd \
@@ -213,6 +256,8 @@ EOF
 
 RUN <<EOF
 # clone and prep JMAP Test Suite
+#
+# Again, just needed so we can run the tests.
 set -e
 git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git
 cd JMAP-TestSuite
@@ -222,6 +267,9 @@ EOF
 
 RUN <<EOF
 # install Mail::JMAPTalk
+#
+# Another Perl prereq, but this one so new that we expect to need the version
+# right from the repo, rather than the latest CPAN release.
 set -e
 git clone --depth 1 --shallow-submodules https://github.com/cyrusimap/Mail-JMAPTalk.git
 cd Mail-JMAPTalk
@@ -241,7 +289,11 @@ ARG IMAPTEST_COMMIT=0c24edb324f10a08223097b5cda145fa005c4026
 
 RUN <<EOF
 # clone and build dovecot.git
-# This one is weird.  We want a specific commit, just for the sake of pinning
+#
+# This is because we want Dovecot's "imaptest" program for doing testing of our
+# IMAP implementation, and it wants Dovecot.
+#
+# This step is weird.  We want a specific commit, just for the sake of pinning
 # to known-good.  We install so that imaptest (below) can rely on the installed
 # Dovecot even after we remove the source.  We remove the source because it's a
 # whole lot of bytes that we don't really need to ship in the OCI image.
@@ -281,11 +333,15 @@ ARG CYRUSLIBS_BRANCH=master
 
 RUN <<EOF
 # clone and build cyruslibs
+#
+# cyruslibs bundles libraries -- most importantly for Xapian search -- at
+# versions newer than Debian ships.  Cyrus builds against these, installed
+# under /usr/local/cyruslibs.  This is why `cyd build` points configure's
+# CFLAGS/LDFLAGS/PKG_CONFIG_PATH and XAPIAN_CONFIG at that prefix.
 set -e
 git clone --depth 1 --shallow-submodules -b $CYRUSLIBS_BRANCH \
   https://github.com/cyrusimap/cyruslibs.git
 cd cyruslibs
-# RUN git checkout origin/master
 ./build.sh
 cd ..
 $CLEANUP && rm -rf cyruslibs || true

@@ -7,6 +7,15 @@ use Process::Status;
 
 sub abstract { 'clean all build artifacts in the cyrus-imapd source tree' }
 
+sub description {
+  return <<~'END';
+  Remove build artifacts from the checkout with "git clean".  This only deletes
+  git-ignored files (the -X flag), so new source files you haven't yet added are
+  safe; it will not blow away uncommitted work the way a plain "git clean -dfx"
+  would.
+  END
+}
+
 sub execute ($self, $opt, $args) {
   my $root = $self->app->repo_root;
   chdir $root or die "can't chdir to $root: $!";

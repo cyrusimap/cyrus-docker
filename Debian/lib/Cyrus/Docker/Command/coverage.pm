@@ -8,6 +8,13 @@ use Cwd;
 
 sub abstract { 'generate code coverage for the cyrus-imapd repo' }
 
+sub description {
+  return <<~'END';
+  Build Cyrus with coverage instrumentation, run both test suites, and produce a
+  combined HTML coverage report under ./coverage.
+  END
+}
+
 my sub run (@args) {
   system(@args);
   Process::Status->assert_ok($args[0]);
