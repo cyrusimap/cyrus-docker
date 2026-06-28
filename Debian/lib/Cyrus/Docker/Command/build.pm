@@ -59,7 +59,6 @@ sub execute ($self, $opt, $args) {
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
-  run(qw( make lex-fix                  ), @jobs);
   run(qw( make                          ), @jobs);
 
   if (my $target = $opt->cunit_style) {
