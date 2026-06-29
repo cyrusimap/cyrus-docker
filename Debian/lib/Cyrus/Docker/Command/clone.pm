@@ -8,6 +8,16 @@ use Process::Status;
 
 sub abstract { 'clone the cyrus-imapd source tree to /srv, if not present' }
 
+sub description {
+  return <<~'END';
+  Clone cyrus-imapd.git to the repo root (default /srv/cyrus-imapd) if nothing
+  is there yet.  If the directory already exists, this does nothing -- it will
+  not touch or update an existing checkout.  For day to day development, you'll
+  probably work with a checkout mounted from the host (via dar) rather than one
+  cloned here.
+  END
+}
+
 sub execute ($self, $opt, $arg) {
   my $root = $self->app->repo_root;
   my $repo = 'https://github.com/cyrusimap/cyrus-imapd.git';
