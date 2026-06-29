@@ -17,8 +17,26 @@ sub description {
 }
 
 sub execute ($self, $opt, $args) {
-  my $root = $self->app->repo_root->child('docsrc');
+  my $root = $self->app->repo_root;
   chdir $root or die "can't chdir to $root: $!";
+
+  require Path::Tiny;
+  my $status = Path::Tiny::path("config.status");
+  my $have_sphinx;
+  LINE: for my $line ($status->exists ? $status->lines : ()) {
+    if ($line =~ m{^S\["SPHINX_BUILD"\]="[^"]+"$}m) {
+      $have_sphinx = 1;
+      last LINE;
+    }
+  }
+
+  if ($have_sphinx) {
+    say "already configured with sphinx, great!";
+  } else {
+    my $class = 'Cyrus::Docker::Command::build';
+    my ($cmd, $opt, @args) = $class->prepare($self->app, qw(--with-sphinx -n));
+    $self->app->execute_command($cmd, $opt, @args);
+  }
 
   # I would prefer to use long form options, but they are not added until
   # Sphinx v7, and we are using v5 right now. -- rjbs, 2025-01-10
@@ -26,8 +44,9 @@ sub execute ($self, $opt, $args) {
   #
   # -n is "--nitpicky"
   # -W is "--fail-on-warning"
-  system('make', q{SPHINXOPTS=-n -W}, 'html');
-  Process::Status->assert_ok('making "html" target');
+  local $ENV{SPHINXOPTS} = q{SPHINXOPTS=-n -W};
+  system('make doc');
+  Process::Status->assert_ok('making "doc" target');
 }
 
 1;
