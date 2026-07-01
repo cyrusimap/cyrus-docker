@@ -12067,6 +12067,7 @@ Run "dar COMMAND".  Here are some commands:
 And these commands all run "dar cyd CMD" in the container:
  • build     - configure and compile Cyrus
  • clean     - "make clean" the repo
+ • coverage  - generate code coverage
  • distcheck - build and test a Cyrus IMAP distribution
  • makedocs  - build the html version of the docs
  • shell     - run a shell
@@ -12179,14 +12180,14 @@ sub do_start ($class, $args) {
   #   [ 'image=s',  'which image to use' ],
   #   [ 'run-outside-clone', 'run even if cwd is not a cyrus-imapd clone' ],
 
-  unless (-e 'imap/imapd.c' || $run_outside_clone) {
+  my $ctx = $class->_repo_context;
+
+  unless (-e path($ctx->{toplevel})->child('imap/imapd.c') || $run_outside_clone) {
     die <<'END';
 The current directory doesn't appear to be a cyrus-imapd clone.  To run dar
 anyway, pass the --run-outside-clone switch.
 END
   }
-
-  my $ctx = $class->_repo_context;
 
   # We mount worktrees at their host path so their absolute links into .git
   # resolve.  That means we neither need nor can tolerate the relativeWorktrees
@@ -12236,7 +12237,7 @@ END
     return $existing_container;
   }
 
-  my $name = $class->container_name_for_cwd;
+  my $name = $class->container_name;
   say "⏳ Starting container $name to idle.";
 
   my $image_specifier = $class->_requested_image($opt_image);
@@ -12467,7 +12468,7 @@ sub _stop_and_remove ($class, $container) {
 }
 
 BEGIN {
-  for my $cyd_cmd (qw( build clean distcheck makedocs shell smoke test )) {
+  for my $cyd_cmd (qw( build clean coverage distcheck makedocs shell smoke test )) {
     my $code = sub ($class, $args) {
       $class->do_run([ 'cyd', $cyd_cmd, @$args ]);
     };
@@ -12559,11 +12560,15 @@ sub _get_containers {
 
 sub _existing_container ($class) {
   my $containers = $class->_get_containers;
-  return $containers->{ $class->container_name_for_cwd };
+  return $containers->{ $class->container_name };
 }
 
-sub container_name_for_cwd {
-  my $digest = sha1_hex("$ABS_CWD");
+# The container is named for the tree that governs the cwd -- the worktree (or
+# plain checkout) toplevel -- not the raw cwd.  That way "dar start" at the repo
+# root and "dar test" from a subdirectory below it agree on the same container.
+sub container_name ($class) {
+  my $ctx = $class->_repo_context;
+  my $digest = sha1_hex("$ctx->{toplevel}");
   return "cyd-" . substr($digest, 0, 12);
 }
 
