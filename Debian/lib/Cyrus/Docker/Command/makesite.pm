@@ -3,6 +3,7 @@ use v5.36.0;
 package Cyrus::Docker::Command::makesite;
 use Cyrus::Docker -command;
 
+use File::pushd;
 use Process::Status;
 use Path::Tiny;
 
@@ -44,6 +45,17 @@ my sub cyrus_branch ($branch, $paths = undef) {
   );
 }
 
+my sub cyrus_branch_legacy ($branch, $paths = undef) {
+  return (
+    $branch => {
+      repo   => 'imapd',
+      branch => $branch,
+      paths  => $paths // [ "/" . ($branch =~ s{^cyrus-imapd-}{}r) ],
+      make_docsrc => 1, # use "make -C docsrc" to avoid configure
+    },
+  );
+}
+
 sub execute ($self, $opt, $args) {
   # A semi-persistent working directory
   # (unclear if we still need this. It was intended in the original to reduce
@@ -65,6 +77,7 @@ sub execute ($self, $opt, $args) {
       repo    => 'sasl',
       branch  => 'master',
       paths   => [ '/sasl' ],
+      make_docsrc => 1,
     },
 
     cyrus_branch('master', [ '/dev' ]),
@@ -75,9 +88,9 @@ sub execute ($self, $opt, $args) {
     archive_copy('3.4'),
     archive_copy('3.6'),
 
-    cyrus_branch('cyrus-imapd-3.8'),
-    cyrus_branch('cyrus-imapd-3.10'),
-    cyrus_branch('cyrus-imapd-3.12', [ '/3.12', '/', '/stable' ]),
+    cyrus_branch_legacy('cyrus-imapd-3.8'),
+    cyrus_branch_legacy('cyrus-imapd-3.10'),
+    cyrus_branch_legacy('cyrus-imapd-3.12', [ '/3.12', '/', '/stable' ]),
   );
 
   # set up our basedir
@@ -94,7 +107,7 @@ sub execute ($self, $opt, $args) {
 
   # build the docs from each source
   my %current;
-  foreach my $source_name (sort keys %source) {
+  for my $source_name (sort keys %source) {
     say "::group::building $source_name section of site"; # GitHub Actions log
 
     my $details = $source{$source_name};
@@ -112,8 +125,16 @@ sub execute ($self, $opt, $args) {
       run_or_die('git', 'clone', $repo_url,
                  '--branch', $branch,
                  '--single-branch',
-                 '--no-tags',
-                 '--depth', 1,
+
+                 # We used to build "--no-tags --depth 1" but we can't do that
+                 # if we want to "make doc" because we need to configure first.
+                 #
+                 # We can probably speed this all up by making a clone or
+                 # worktree from the single pre-existing checkout.  Future
+                 # work.  CYR-3197 -- rjbs, 2026-07-07
+                 # '--no-tags',
+                 # '--depth', 1
+
                  # We can add this unconditionally. git doesn't really care if
                  # we're cloning cyrus-sasl with cyrus-imapd as our reference
                  '--reference', $self->app->repo_root,
@@ -131,9 +152,16 @@ sub execute ($self, $opt, $args) {
     } else {
       say "#### building docs for $source_name...";
       run_or_die('git', '-C', $dir, 'checkout', '-q', "origin/$branch");
-      run_or_die('make', '-C', $dir->child('docsrc'), 'html');
 
-      $src = $basedir->child($source_name, qw(docsrc build html));
+      if ($details->{make_docsrc}) {
+        run_or_die('make', '-C', $dir->child('docsrc'), 'html');
+        $src = $basedir->child($source_name, qw(docsrc build html));
+      } else {
+        local $ENV{CYRUS_CLONE_ROOT} = "$dir";
+        my $guard = pushd("$dir");
+        run_or_die('/srv/bin/cyd', 'makedocs');
+        $src = $basedir->child($source_name, qw(doc html));
+      }
     }
 
     for my $path ($details->{paths}->@*) {

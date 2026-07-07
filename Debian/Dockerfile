@@ -187,6 +187,7 @@ apt-get -y install --no-install-recommends \
     valgrind \
     `# BEGIN for cyrus-docker or just quality of life` \
     less \
+    libfile-pushd-perl \
     tini
 EOF
 
