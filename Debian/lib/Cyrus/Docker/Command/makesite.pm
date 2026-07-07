@@ -58,7 +58,7 @@ sub execute ($self, $opt, $args) {
     sasl    => 'https://github.com/cyrusimap/cyrus-sasl.git',
     imapd   => 'https://github.com/cyrusimap/cyrus-imapd.git',
     archive => 'https://github.com/cyrusimap/cyrusimap.github.io.git',
-);
+  );
 
   my %source = (
     'cyrus-sasl' => {
@@ -79,7 +79,6 @@ sub execute ($self, $opt, $args) {
     cyrus_branch('cyrus-imapd-3.10'),
     cyrus_branch('cyrus-imapd-3.12', [ '/3.12', '/', '/stable' ]),
   );
-
 
   # set up our basedir
   $basedir->mkdir unless $basedir->is_dir;
