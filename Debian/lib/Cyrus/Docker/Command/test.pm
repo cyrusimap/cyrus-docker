@@ -8,6 +8,20 @@ use Process::Status;
 
 sub abstract { 'test the cyrus-imapd repo with cassandane' }
 
+sub description {
+  return <<~'END';
+  Run the Cassandane (Perl integration) test suite against the built Cyrus.
+
+  With no arguments, runs every test.  Otherwise, name suites or individual
+  tests as documented in testrunner.pl:
+
+    test Quota                run the whole Quota suite
+    test Quota.quotarename    run one test
+    test Admin Quota          run several
+    test ~Quota               run everything *except* the Quota suite
+  END
+}
+
 sub opt_spec {
   return (
     [ 'format=s', "which formatter to use; default: pretty",
@@ -32,6 +46,8 @@ sub execute ($self, $opt, $args) {
   my $root = $self->app->repo_root->child('cassandane');
   chdir $root or die "can't chdir to $root: $!";
 
+  # Cassandane needs a cassandane.ini.  In the image we just drop the canonical
+  # "dockertests" profile into place and hand it to the cyrus user.
   unless (-e "cassandane.ini") {
     system(qw(cp -af cassandane.ini.dockertests cassandane.ini));
     Process::Status->assert_ok('copying cassandane.ini.dockertests to cassandane.ini');
@@ -89,6 +105,9 @@ sub execute ($self, $opt, $args) {
     Process::Status->assert_ok('Cassandane make syntax');
   }
 
+  # Cassandane (really, the Cyrus code it drives) must run as the "cyrus" user,
+  # not root.  We drop to cyrus:mail with setpriv.  Note there's no sudo here:
+  # running inside the container we're already root and simply step *down*.
   system(
     qw( setpriv --reuid=cyrus --regid=mail --clear-groups --inh-caps=-all ),
     qw( ./testrunner.pl ), @jobs, qw( -f ), $opt->format,

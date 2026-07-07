@@ -14,6 +14,24 @@ my sub run (@args) {
 
 sub abstract { 'configure, build, and install cyrus-imapd' }
 
+sub description {
+  return <<~'END';
+  Configure, build, "make check", and install cyrus-imapd from the checkout at
+  /srv/cyrus-imapd (or wherever CYRUS_CLONE_ROOT points).
+
+  This is the canonical way Cyrus is built for development and CI.  The set of
+  ./configure options used here is the *reference build configuration*: if you
+  ever need to build Cyrus by hand, the list in the configure() method below is
+  the one to copy.
+
+  Common combinations:
+    build         configure, build, run the fast CUnit checks, and install
+    build -r      recompile a previous build (skip configure)
+    build -n      skip the "make check" step
+    build -nr     recompile, skipping both configure and "make check"
+  END
+}
+
 # gcov isn't strictly a sanitizer, but it's easier to implement it as one
 # (and it doesn't make sense to run coverage on a sanitizer build, even if the
 # compiler would let us)
@@ -85,6 +103,14 @@ sub configure ($self, $opt) {
     die "git-version.sh can't decide what version this is; giving up!\n";
   }
 
+  # This is the reference ./configure invocation: the full set of features we
+  # build and test in CI.  Build Cyrus by hand and this is the list to copy.  A
+  # few that aren't self-explanatory:
+  #
+  #   --enable-unit-tests  builds the CUnit suite ("make check")
+  #   --enable-xapian      search; needs the newer libs from cyruslibs (above)
+  #   --enable-debug-slowio deliberately slows some I/O to surface ordering bugs
+  #   --enable-jmap / --enable-http  the httpd subsystem (JMAP, *DAV)
   my @configopts = qw(
     --enable-autocreate
     --enable-calalarmd
