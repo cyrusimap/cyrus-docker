@@ -38,6 +38,7 @@ apt-get -y install --no-install-recommends \
     heimdal-dev \
     help2man \
     libanyevent-perl \
+    libauthen-scram-perl \
     libbsd-dev \
     libbsd-resource-perl \
     libclamav-dev \
