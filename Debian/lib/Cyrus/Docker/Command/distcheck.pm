@@ -111,6 +111,8 @@ sub execute ($self, $opt, $args) {
 
   run(qw( cyd test ));
 
+  run(qw( cyd makedocs ));
+
   # chdir back to original root so that tempdir can be cleaned up
   chdir $root or die "can't chdir to $root: $!";
 }
