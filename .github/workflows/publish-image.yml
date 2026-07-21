@@ -37,31 +37,117 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
+      # push-by-digest needs the docker-container driver; the default "docker"
+      # driver can't do it.  setup-buildx-action gives us that builder.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.12.0
+
+      # A short, filesystem-safe name for this leg's architecture (amd/arm),
+      # used to name the per-arch digest artifact uploaded below.
+      - name: Name this architecture
+        run: echo "ARCH=${{ matrix.platform == '' && 'amd' || 'arm' }}" >> "$GITHUB_ENV"
+
+      - name: Extract metadata (labels) for Docker
         id: meta
         uses: docker/metadata-action@v6.1.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           labels: |
             org.cyrusimap.cyrus-docker.built-from=${{ github.sha }}
-          tags: |
-            type=ref,event=branch,enable=${{ matrix.platform == '' }}
-            type=raw,value=${{ matrix.debian }}-dev${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'dev') }}
-            type=raw,value=${{ matrix.debian }}${{ matrix.platform }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
-      - name: Build and push OCI image
-        id: push
+      # Each build runs on a single native architecture and pushes an *untagged*
+      # image, identified only by digest (push-by-digest).  The merge-manifests
+      # job stitches the per-arch digests into the tagged, multi-arch manifest
+      # lists.
+      - name: Build and push image by digest
+        id: build
         uses: docker/build-push-action@v7.2.0
         with:
           context: Debian
           build-args: DEBIAN_VERSION=${{ matrix.debian }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: false
+
+      # Hand the digest to the merge job as an empty file named after it.  The
+      # artifact name is scoped by Debian version so each merge leg picks up
+      # only its own architectures.
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.debian }}-${{ env.ARCH }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-manifests:
+    # Combine the per-architecture digests pushed above into one tagged,
+    # multi-arch manifest list per Debian version.
+    needs: build-and-push-image
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        debian: [ bookworm, trixie ]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Download digests for this Debian version
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-${{ matrix.debian }}-*
+          merge-multiple: true
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v4.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.12.0
+
+      - name: Extract metadata (tags) for the manifest list
+        id: meta
+        uses: docker/metadata-action@v6.1.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # master publishes the bare Debian name (e.g. "trixie"); every other
+          # branch publishes "{debian}-{branch}" (e.g. "trixie-dev")
+          tags: |
+            type=raw,value=${{ matrix.debian }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
+            type=raw,value=${{ matrix.debian }}-{{branch}},enable=${{ github.ref != format('refs/heads/{0}', 'master') }}
+
+      - name: Create the multi-arch manifest list
+        working-directory: /tmp/digests
+        run: |
+          # I swear I didn't invent this, it's code from the wild.  We want to
+          # run: docker buildx imagetools create -t tag1 -t tag2 hash1 hash2...
+          #
+          # In /tmp/digests, we wrote all the digests we want to collect,
+          # per-arch, so that's that.  Looks bonkers, but is simpler.
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect the manifest list
+        run: |
+          docker buildx imagetools inspect \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}

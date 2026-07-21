@@ -36,7 +36,7 @@ $ docker build -t cyrus-bookworm .
 ## Fetch latest images from the GitHub Container Repository
 
 ```
-$ docker pull ghcr.io/cyrusimap/cyrus-docker:nightly
+$ docker pull ghcr.io/cyrusimap/cyrus-docker:trixie
 ```
 
 
@@ -45,12 +45,12 @@ $ docker pull ghcr.io/cyrusimap/cyrus-docker:nightly
 To run the built container:
 
 ```
-$ docker run -it ghcr.io/cyrusimap/cyrus-docker:nightly
+$ docker run -it ghcr.io/cyrusimap/cyrus-docker:trixie
 ```
 
 (Or provide whatever name you use when building the image yourself.)
 
 You'll be dropped into an interactive shell with some help about how to go
 about cloning and testing Cyrus IMAP.  You can also look at the included `dar`
-tool (`./bin/dar)) for how to use this container while working on your
+tool (`./bin/dar`)) for how to use this container while working on your
 own branch of Cyrus IMAP.
