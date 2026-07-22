@@ -144,6 +144,7 @@ jobs:
           # In /tmp/digests, we wrote all the digests we want to collect,
           # per-arch, so that's that.  Looks bonkers, but is simpler.
           docker buildx imagetools create \
+            --annotation "index:org.opencontainers.image.description=Cyrus IMAP development and CI image" \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
