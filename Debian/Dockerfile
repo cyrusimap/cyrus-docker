@@ -50,6 +50,7 @@ apt-get -y install --no-install-recommends \
     automake \
     autotools-dev \
     bash-completion \
+    bear \
     bison \
     build-essential \
     check \
@@ -189,6 +190,30 @@ apt-get -y install --no-install-recommends \
     less \
     libfile-pushd-perl \
     tini
+EOF
+
+# Install recent versions of clang tooling, rather than relying on the ones
+# shipped with Debian. Our clang-format config uses directives that aren't
+# supported by current Debian baseline release bookworm.
+ARG LLVM_VERSION=21
+
+RUN <<EOF
+set -e
+apt-get update
+apt-get -y install --no-install-recommends ca-certificates gnupg
+. /etc/os-release
+wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+  | gpg --dearmor -o /usr/share/keyrings/llvm.gpg
+echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-${LLVM_VERSION} main" \
+  > /etc/apt/sources.list.d/llvm.list
+apt-get update
+apt-get -y install --no-install-recommends \
+    clang-format-${LLVM_VERSION} \
+    clang-tidy-${LLVM_VERSION} \
+    clangd-${LLVM_VERSION}
+update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_VERSION} 100
+update-alternatives --install /usr/bin/clang-tidy   clang-tidy   /usr/bin/clang-tidy-${LLVM_VERSION}   100
+update-alternatives --install /usr/bin/clangd       clangd       /usr/bin/clangd-${LLVM_VERSION}       100
 EOF
 
 RUN <<EOF
