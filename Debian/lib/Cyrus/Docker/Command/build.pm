@@ -67,6 +67,7 @@ sub opt_spec {
     ] } ],
     [ 'cflags=s' => 'additional flags to include in CFLAGS' ],
     [ 'cxxflags=s' => 'additional flags to include in CXXFLAGS' ],
+    [ 'bear|b' => 'run make with bear' ],
   );
 }
 
@@ -78,7 +79,9 @@ sub execute ($self, $opt, $args) {
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
-  run(qw( make                          ), @jobs);
+  # bear generates compile_commands.json for clang tooling
+  my @with_bear = $opt->bear ? qw(bear --) : ();
+  run(@with_bear, qw(make                  ), @jobs);
 
   if (my $target = $opt->cunit_style) {
     $target =~ s/_/-/;
