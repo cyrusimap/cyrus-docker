@@ -6,6 +6,7 @@ use experimental 'signatures'; # Everything we use is stable and accepted.
 package Cyrus::Docker::dar;
 
 use utf8;
+use Data::Dumper;
 
 BEGIN {
   my @missing;
@@ -101,10 +102,23 @@ When you want to clean up the container you've got running, run "dar prune".
 The default image is ghcr.io/cyrusimap/cyrus-docker:bookworm, but you can set a
 different default for all your uses of "dar" by creating the file
 ~/.cyrus-docker/config, which should contain a JSON object.  The only
-meaningful keys, for now, are "default_image", which provides an alternate
-default image, and "shm_size", which should specify the size of /dev/shm
-(instead of dar's default of 4GB). A single cass run takes about 1.3GB of
-space, so 4GB gives us room to grow and for reruns in the same image.
+meaningful keys, for now, are:
+
+  * "default_image" - use an alternate docker image by default, for example:
+                      "ghcr.io/cyrusimap/cyrus-docker:trixie"
+
+  * "shm_size" -      specify the size of /dev/shm (instead of dar's
+                      default of 4GB). A single cass run takes about 1.3GB
+                      of space, so 4GB gives us room to grow and for reruns
+                      in the same image.
+
+  * "files" -         an arrayref of objects specifying files to be copied
+                      into the running image. Each object must contain a
+                      "source" key (relative or absolute path on disk of
+                      the file to copy), a "dest" key (absolute path of
+                      where in the running image to put the file), and
+                      optionally a "mode" key of either "overwrite" or
+                      "append" (defaults to "overwrite").
 
 END
 
@@ -366,6 +380,95 @@ END
     if ($?) {
       warn "❗️ Couldn't copy config into container, " .
         Process::Status->new($?)->as_string;
+    }
+  }
+
+  if ($CONFIG->{files} && ref($CONFIG->{files}) eq 'ARRAY') {
+    my $tmpinc = "aaaaa";
+
+    for my $spec ($CONFIG->{files}->@*) {
+      my %copy = %$spec;
+
+      my $src = delete $copy{source};
+      my $dest = delete $copy{dest};
+      my $mode = delete $copy{mode} // 'overwrite';
+
+      unless ($src) {
+        warn sprintf("Missing 'source' directive, ignoring this file: %s", Dumper($spec));
+        next;
+      }
+
+      unless ($dest) {
+        warn sprintf("Missing 'dest' directive, ignoring this file: %s", Dumper($spec));
+        next;
+      }
+
+      if (%copy) {
+        warn sprintf("Extra unknown keys (%s), ignoring this file: %s", Dumper([ keys %copy ]), Dumper($spec));
+        next;
+      }
+
+      unless ($mode eq 'overwrite' || $mode eq 'append') {
+        warn sprintf("Unknown mode '$mode', ignoring this file: %s", Dumper($spec));
+        next;
+      }
+
+      my $spath = path(
+        $src =~ m{^/} ? $src : $config_file->parent->child($src)
+      );
+
+      unless ($spath->exists) {
+        warn sprintf("'source' $spath not found, ignoring this file: %s", Dumper($spec));
+        next;
+      }
+
+      if ($mode eq 'overwrite') {
+        run(
+          [
+            'docker', 'cp',
+            $spath,
+            "$container_id:$dest",
+          ],
+          _emptyref(),
+          \my $out,
+          \my $err,
+        );
+
+        if ($err) {
+          warn "Error copying $spath to $dest: $err (out: $out)\n";
+        }
+      } else {
+        run(
+          [
+            'docker', 'cp',
+            $spath,
+            "$container_id:/tmp/dar_$tmpinc",
+          ],
+          _emptyref(),
+          \my $out,
+          \my $err,
+        );
+
+        if ($err) {
+          warn "Error copying $spath to /tmp/dar_$tmpinc: $err (out: $out)\n";
+        } else {
+          run(
+            [
+              qw( docker exec ), $container->{ID},
+              'sh', "-c",  "cat /tmp/dar_$tmpinc >> $dest"
+            ],
+            _emptyref(),
+            \$out,
+            \$err,
+          );
+
+          if ($err) {
+            warn "Error appending $spath to $dest: $err (out: $out)\n";
+          }
+        }
+
+        $tmpinc++;
+      }
     }
   }
 
