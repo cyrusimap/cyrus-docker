@@ -1,27 +1,27 @@
 name: Clean up old GHCR images
 
 on:
-  workflow_dispatch: {}
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Only report what would be deleted
+        type: boolean
+        default: false
 
 jobs:
   cleanup-old-containers:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
       packages: write
-      attestations: write
-      id-token: write
 
     steps:
       - name: Destroy untagged images
-        uses: actions/delete-package-versions@v5
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
         with:
-          package-name: 'cyrus-docker'
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
+          package: cyrus-docker
+          keep-n-untagged: 10
+          validate: true
+          # Belt and braces: never touch an image carrying a release tag.
+          exclude-tags: bookworm*,trixie*
+          dry-run: ${{ inputs.dry-run }}
