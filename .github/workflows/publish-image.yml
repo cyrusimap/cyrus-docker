@@ -12,6 +12,14 @@ on:
         type: choice
         options: [ all, bookworm, trixie ]
         default: all
+      cyruslibs:
+        description: "cyruslibs ref (branch or tag) to build against, e.g. cyruslibs-fastmail-v68; empty for master"
+        type: string
+        default: ""
+      suffix:
+        description: "Tag suffix naming an alternative image, e.g. libs68 -> trixie-libs68; required when cyruslibs is set"
+        type: string
+        default: ""
 
 env:
   REGISTRY: ghcr.io
@@ -25,16 +33,46 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       debians: ${{ steps.plan.outputs.debians }}
+      cyruslibs: ${{ steps.plan.outputs.cyruslibs }}
+      tag-tail: ${{ steps.plan.outputs.tag-tail }}
     steps:
       - id: plan
         env:
           DEBIAN: ${{ inputs.debian || 'all' }}
+          CYRUSLIBS: ${{ inputs.cyruslibs || 'master' }}
+          SUFFIX: ${{ inputs.suffix }}
+          BRANCH: ${{ github.ref_name }}
         run: |
+          if [ "$CYRUSLIBS" != master ] && [ -z "$SUFFIX" ]; then
+            echo "::error::a tag suffix is required when building against an alternative cyruslibs"
+            exit 1
+          fi
+          if [ -n "$SUFFIX" ] && ! [[ "$SUFFIX" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::the tag suffix may only contain letters, digits, and _ . -"
+            exit 1
+          fi
+
+          # Image tags are "{debian}{tail}".  master publishes the bare Debian
+          # name (e.g. "trixie"); every other branch appends the branch (e.g.
+          # "trixie-dev"); an alternative image appends its suffix after that
+          # (e.g. "trixie-libs68", or "trixie-dev-libs68").
+          tail=""
+          if [ "$BRANCH" != master ]; then
+            tail="-$(echo -n "$BRANCH" | tr -c 'A-Za-z0-9_.-' -)"
+          fi
+          if [ -n "$SUFFIX" ]; then
+            tail="$tail-$SUFFIX"
+          fi
+
           case "$DEBIAN" in
             all) debians='["bookworm","trixie"]' ;;
             *)   debians="[\"$DEBIAN\"]" ;;
           esac
-          echo "debians=$debians" >> "$GITHUB_OUTPUT"
+          {
+            echo "debians=$debians"
+            echo "cyruslibs=$CYRUSLIBS"
+            echo "tag-tail=$tail"
+          } >> "$GITHUB_OUTPUT"
 
   build-and-push-image:
     needs: plan
@@ -89,7 +127,9 @@ jobs:
         uses: docker/build-push-action@v7.2.0
         with:
           context: Debian
-          build-args: DEBIAN_VERSION=${{ matrix.debian }}
+          build-args: |
+            DEBIAN_VERSION=${{ matrix.debian }}
+            CYRUSLIBS_BRANCH=${{ needs.plan.outputs.cyruslibs }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
 
@@ -154,11 +194,8 @@ jobs:
         uses: docker/metadata-action@v6.1.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # master publishes the bare Debian name (e.g. "trixie"); every other
-          # branch publishes "{debian}-{branch}" (e.g. "trixie-dev")
-          tags: |
-            type=raw,value=${{ matrix.debian }},enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
-            type=raw,value=${{ matrix.debian }}-{{branch}},enable=${{ github.ref != format('refs/heads/{0}', 'master') }}
+          # The plan job explains the tag scheme.
+          tags: type=raw,value=${{ matrix.debian }}${{ needs.plan.outputs.tag-tail }}
 
       - name: Create the multi-arch manifest list
         working-directory: /tmp/digests
@@ -170,6 +207,7 @@ jobs:
           # per-arch, so that's that.  Looks bonkers, but is simpler.
           docker buildx imagetools create \
             --annotation "index:org.opencontainers.image.description=Cyrus IMAP development and CI image" \
+            --annotation "index:org.cyrusimap.cyrus-docker.cyruslibs=${{ needs.plan.outputs.cyruslibs }}" \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
