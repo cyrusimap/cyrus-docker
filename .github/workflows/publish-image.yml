@@ -5,19 +5,44 @@ on:
     branches: [ 'dev', 'master' ]
   schedule:
     - cron: '0 3 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      debian:
+        description: Debian release to build on
+        type: choice
+        options: [ all, bookworm, trixie ]
+        default: all
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  plan:
+    # Turn the inputs (from dispatch or defaults) into the values the build and
+    # merge jobs share.
+    name: Work out what to build
+    runs-on: ubuntu-24.04
+    outputs:
+      debians: ${{ steps.plan.outputs.debians }}
+    steps:
+      - id: plan
+        env:
+          DEBIAN: ${{ inputs.debian || 'all' }}
+        run: |
+          case "$DEBIAN" in
+            all) debians='["bookworm","trixie"]' ;;
+            *)   debians="[\"$DEBIAN\"]" ;;
+          esac
+          echo "debians=$debians" >> "$GITHUB_OUTPUT"
+
   build-and-push-image:
+    needs: plan
     strategy:
       fail-fast: false
       matrix:
         platform: [ "", "-arm" ]
-        debian: [ bookworm, trixie ]
+        debian: ${{ fromJson(needs.plan.outputs.debians) }}
     runs-on: ubuntu-24.04${{ matrix.platform }}
 
     permissions:
@@ -95,12 +120,12 @@ jobs:
   merge-manifests:
     # Combine the per-architecture digests pushed above into one tagged,
     # multi-arch manifest list per Debian version.
-    needs: build-and-push-image
+    needs: [ plan, build-and-push-image ]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        debian: [ bookworm, trixie ]
+        debian: ${{ fromJson(needs.plan.outputs.debians) }}
 
     permissions:
       contents: read
