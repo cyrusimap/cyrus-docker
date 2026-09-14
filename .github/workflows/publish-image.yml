@@ -20,6 +20,10 @@ on:
         description: "Tag suffix naming an alternative image, e.g. libs68 -> trixie-libs68; required when cyruslibs is set"
         type: string
         default: ""
+      push:
+        description: Push the images to GHCR (off to just check that they build)
+        type: boolean
+        default: true
 
 env:
   REGISTRY: ghcr.io
@@ -35,6 +39,7 @@ jobs:
       debians: ${{ steps.plan.outputs.debians }}
       cyruslibs: ${{ steps.plan.outputs.cyruslibs }}
       tag-tail: ${{ steps.plan.outputs.tag-tail }}
+      push: ${{ steps.plan.outputs.push }}
     steps:
       - id: plan
         env:
@@ -42,6 +47,7 @@ jobs:
           CYRUSLIBS: ${{ inputs.cyruslibs || 'master' }}
           SUFFIX: ${{ inputs.suffix }}
           BRANCH: ${{ github.ref_name }}
+          PUSH: ${{ github.event_name != 'workflow_dispatch' || inputs.push }}
         run: |
           if [ "$CYRUSLIBS" != master ] && [ -z "$SUFFIX" ]; then
             echo "::error::a tag suffix is required when building against an alternative cyruslibs"
@@ -72,6 +78,7 @@ jobs:
             echo "debians=$debians"
             echo "cyruslibs=$CYRUSLIBS"
             echo "tag-tail=$tail"
+            echo "push=$PUSH"
           } >> "$GITHUB_OUTPUT"
 
   build-and-push-image:
@@ -94,6 +101,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Log in to the Container registry
+        if: needs.plan.outputs.push == 'true'
         uses: docker/login-action@v4.2.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -131,9 +139,10 @@ jobs:
             DEBIAN_VERSION=${{ matrix.debian }}
             CYRUSLIBS_BRANCH=${{ needs.plan.outputs.cyruslibs }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          outputs: ${{ needs.plan.outputs.push == 'true' && format('type=image,name={0}/{1},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) || 'type=cacheonly' }}
 
       - name: Generate artifact attestation
+        if: needs.plan.outputs.push == 'true'
         uses: actions/attest-build-provenance@v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
@@ -144,12 +153,14 @@ jobs:
       # artifact name is scoped by Debian version so each merge leg picks up
       # only its own architectures.
       - name: Export digest
+        if: needs.plan.outputs.push == 'true'
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
+        if: needs.plan.outputs.push == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: digest-${{ matrix.debian }}-${{ env.ARCH }}
@@ -161,6 +172,7 @@ jobs:
     # Combine the per-architecture digests pushed above into one tagged,
     # multi-arch manifest list per Debian version.
     needs: [ plan, build-and-push-image ]
+    if: needs.plan.outputs.push == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
