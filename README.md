@@ -39,6 +39,30 @@ $ docker build -t cyrus-bookworm .
 $ docker pull ghcr.io/cyrusimap/cyrus-docker:trixie
 ```
 
+The `bookworm` and `trixie` tags are rebuilt nightly from `master`, and the
+`dev` branch publishes `bookworm-dev` and `trixie-dev`.
+
+### Alternative images
+
+Sometimes you want the same image built against a different cyruslibs, say to
+test Cyrus against the libraries a particular release ships.  Run the "Create
+and publish an OCI image" workflow by hand and fill in:
+
+* **debian**: `bookworm`, `trixie`, or `all`
+* **cyruslibs**: the cyruslibs branch or tag to build, e.g. `cyruslibs-fastmail-v68`
+* **suffix**: a short name for the result, e.g. `libs68`
+
+That publishes `trixie-libs68` (and `bookworm-libs68`, with `all`).  Run from
+a branch other than `master`, the branch name goes between, as in
+`trixie-dev-libs68`.  The suffix is yours to choose, so check the
+`org.cyrusimap.cyrus-docker.cyruslibs` label if you need to know what an image
+was really built from.
+
+These images are not rebuilt nightly.  They stay as built until someone runs
+the workflow again with the same suffix, or deletes them.
+
+Turn off **push** to check that an image builds without publishing anything.
+
 
 ## Running the Docker instance
 
