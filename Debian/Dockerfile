@@ -358,6 +358,10 @@ EOF
 # This determines what branch (head or tag) we use to build cyruslibs.
 ARG CYRUSLIBS_BRANCH=master
 
+# Alternative images are published under a human-chosen tag suffix (see
+# publish-image.yml), so record the head chosen here.
+LABEL org.cyrusimap.cyrus-docker.cyruslibs=$CYRUSLIBS_BRANCH
+
 RUN <<EOF
 # clone and build cyruslibs
 #
