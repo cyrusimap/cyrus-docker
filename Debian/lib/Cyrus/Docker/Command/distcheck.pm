@@ -32,9 +32,7 @@ sub description {
 
 sub opt_spec {
   return (
-    [ 'jobs|j=i', 'specify number of parallel jobs (default: 8) to run for make',
-                  { default => 8 },
-    ],
+    [ 'jobs|j=i', 'specify number of parallel jobs (default: from config, or 8) to run for make' ],
     [ 'dirty',    'do a dirty dist: the git repo MUST be dirty; otherwise, MUST NOT' ],
     [ 'brief',    'only make distcheck, do not test the tarball' ],
   );
@@ -65,7 +63,7 @@ sub execute ($self, $opt, $args) {
 
   run(qw( ./configure --enable-maintainer-mode ));
 
-  my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
+  my @jobs = ("-j", $self->app->job_count($opt->jobs));
 
   run(qw( make distcheck ), @jobs);
 

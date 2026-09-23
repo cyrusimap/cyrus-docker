@@ -28,4 +28,8 @@ sub config ($self) {
   };
 }
 
+sub job_count ($self, $requested) {
+  return $requested // $self->config->{default_jobs} // 8;
+}
+
 1;
