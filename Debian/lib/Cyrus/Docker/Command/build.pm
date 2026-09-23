@@ -123,22 +123,22 @@ sub execute ($self, $opt, $args) {
 
   my $cflags = $self->configure($opt) unless $opt->recompile;
 
+  my @cflags_arg;
+
   if ($opt->make_only_cflags) {
-    $cflags = qq{CFLAGS=$cflags};
-  } else {
-    $cflags = "";
+    @cflags_arg = qq{CFLAGS=$cflags};
   }
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
   # bear generates compile_commands.json for clang tooling
   my @with_bear = $opt->bear ? qw(bear --) : ();
-  run(@with_bear, qw(make                  ), @jobs, $cflags);
+  run(@with_bear, qw(make                  ), @jobs, @cflags_arg);
 
   if (my $target = $opt->cunit_style) {
     $target =~ s/_/-/;
 
-    run("make", $target, @jobs, $cflags);
+    run("make", $target, @jobs, @cflags_arg);
   }
 
   run(qw( sudo make install             ), @jobs);
