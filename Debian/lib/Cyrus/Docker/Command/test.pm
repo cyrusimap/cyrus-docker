@@ -38,8 +38,7 @@ sub opt_spec {
     [ 'rerun',    "only run previously-failed tests" ],
     [ 'valgrind', "run with valgrind" ],
     [ 'verbose|v+', "increase verbosity", { default => 0 } ],
-    [ 'jobs|j=i', "number of parallel jobs (default: 8) to run for make and testrunner",
-                  { default => 8 } ],
+    [ 'jobs|j=i', "number of parallel jobs (default: from config, or 8) to run for make and testrunner" ],
     [],
     [ 'cover',       "write a coverage report for the tests that ran" ],
     [ 'cover-dir=s', "where to write the --cover report; default: coverage",
@@ -151,7 +150,7 @@ sub execute ($self, $opt, $args) {
     path('cassandane.ini')->spew(@lines);
   }
 
-  my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
+  my @jobs = ("-j", $self->app->job_count($opt->jobs));
 
   system(qw(make), @jobs);
   Process::Status->assert_ok('Cassandane make');

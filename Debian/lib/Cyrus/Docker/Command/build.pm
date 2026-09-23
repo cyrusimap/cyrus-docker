@@ -45,9 +45,7 @@ sub opt_spec {
     [ 'recompile|r', 'recompile, make check, and install a previous build' ],
     [ 'with-sphinx|s', 'enable sphinx docs' ],
     [ 'with-sasl=s', 'build with SASL from this directory' ],
-    [ 'jobs|j=i',    'specify number of parallel jobs (default: 8) to run for make/make check',
-                     { default => 8 },
-    ],
+    [ 'jobs|j=i',    'specify number of parallel jobs (default: from config, or 8) to run for make/make check' ],
 
     [ 'cunit-style' => hidden => { default => 'check_fast', one_of => [
       [ 'check'          => 'run make check'                 ],
@@ -129,7 +127,7 @@ sub execute ($self, $opt, $args) {
     @cflags_arg = qq{CFLAGS=$cflags};
   }
 
-  my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
+  my @jobs = ("-j", $self->app->job_count($opt->jobs));
 
   # bear generates compile_commands.json for clang tooling
   my @with_bear = $opt->bear ? qw(bear --) : ();
