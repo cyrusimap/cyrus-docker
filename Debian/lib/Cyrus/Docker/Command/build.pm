@@ -71,6 +71,7 @@ sub opt_spec {
     ] } ],
     [ 'cflags=s' => 'additional flags to include in CFLAGS' ],
     [ 'cxxflags=s' => 'additional flags to include in CXXFLAGS' ],
+    [ 'make-only-cflags|m' => 'pass CFLAGS at make time, not in env at configure' ],
     [ 'bear|b' => 'run make with bear' ],
   );
 }
@@ -120,18 +121,24 @@ sub execute ($self, $opt, $args) {
     assert_coverage_can_be_complete($root, $opt);
   }
 
-  $self->configure($opt) unless $opt->recompile;
+  my $cflags = $self->configure($opt) unless $opt->recompile;
+
+  if ($opt->make_only_cflags) {
+    $cflags = qq{CFLAGS=$cflags};
+  } else {
+    $cflags = "";
+  }
 
   my @jobs = ("-j", $self->app->config->{default_jobs} // $opt->jobs);
 
   # bear generates compile_commands.json for clang tooling
   my @with_bear = $opt->bear ? qw(bear --) : ();
-  run(@with_bear, qw(make                  ), @jobs);
+  run(@with_bear, qw(make                  ), @jobs, $cflags);
 
   if (my $target = $opt->cunit_style) {
     $target =~ s/_/-/;
 
-    run("make", $target, @jobs);
+    run("make", $target, @jobs, $cflags);
   }
 
   run(qw( sudo make install             ), @jobs);
@@ -287,9 +294,12 @@ sub configure ($self, $opt) {
 
   local $ENV{LDFLAGS} = "$san_ldflags -L$libsdir/lib/x86_64-linux-gnu -L$libsdir/lib -Wl,-rpath,$libsdir/lib/x86_64-linux-gnu -Wl,-rpath,$libsdir/lib";
   local $ENV{PKG_CONFIG_PATH} = "$libsdir/lib/x86_64-linux-gnu/pkgconfig:$libsdir/lib/pkgconfig:\$PKG_CONFIG_PATH";
-  local $ENV{CFLAGS} = "$san_flags$san_c_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings -Wformat=2 $more_cflags";
-  local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror $more_cxxflags";
   local $ENV{PATH} = "$libsdir/bin:$ENV{PATH}";
+  local $ENV{CXXFLAGS} = "$san_flags -g -fPIC -W -Wall -Wextra -Werror $more_cxxflags";
+
+  my $cflags = "$san_flags$san_c_flags -g -fPIC -W -Wall -Wextra -Werror -Wwrite-strings -Wformat=2 $more_cflags";
+
+  local $ENV{CFLAGS} = $cflags unless $opt->make_only_cflags;
 
   run(qw( autoreconf -v -i ));
 
@@ -299,6 +309,8 @@ sub configure ($self, $opt) {
     @configopts,
     "XAPIAN_CONFIG=$xapian_config",
   );
+
+  return $cflags;
 }
 
 1;
