@@ -38,14 +38,7 @@ sub execute ($self, $opt, $args) {
     $self->app->execute_command($cmd, $opt, @args);
   }
 
-  # I would prefer to use long form options, but they are not added until
-  # Sphinx v7, and we are using v5 right now. -- rjbs, 2025-01-10
-  # trixie packages Sphinx v8
-  #
-  # -n is "--nitpicky"
-  # -W is "--fail-on-warning"
-  local $ENV{SPHINXOPTS} = q{SPHINXOPTS=-n -W};
-  system('make doc');
+  system('make doc SPHINX_FAIL_ON_WARNINGS="-W --keep-going"');
   Process::Status->assert_ok('making "doc" target');
 }
 
