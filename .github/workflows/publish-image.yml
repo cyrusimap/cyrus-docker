@@ -16,8 +16,12 @@ on:
         description: "cyruslibs ref (branch or tag) to build against, e.g. cyruslibs-fastmail-v68; empty for master"
         type: string
         default: ""
+      jmap-testsuite:
+        description: "JMAP-TestSuite ref (branch, tag, or commit) to install; empty for master"
+        type: string
+        default: ""
       suffix:
-        description: "Tag suffix naming an alternative image, e.g. libs68 -> trixie-libs68; required when cyruslibs is set"
+        description: "Tag suffix naming an alternative image, e.g. libs68 -> trixie-libs68; required when cyruslibs or jmap-testsuite is set"
         type: string
         default: ""
       push:
@@ -38,6 +42,7 @@ jobs:
     outputs:
       debians: ${{ steps.plan.outputs.debians }}
       cyruslibs: ${{ steps.plan.outputs.cyruslibs }}
+      jmap-testsuite: ${{ steps.plan.outputs.jmap-testsuite }}
       tag-tail: ${{ steps.plan.outputs.tag-tail }}
       push: ${{ steps.plan.outputs.push }}
     steps:
@@ -45,12 +50,13 @@ jobs:
         env:
           DEBIAN: ${{ inputs.debian || 'all' }}
           CYRUSLIBS: ${{ inputs.cyruslibs || 'master' }}
+          JMAP_TESTSUITE: ${{ inputs.jmap-testsuite || 'master' }}
           SUFFIX: ${{ inputs.suffix }}
           BRANCH: ${{ github.ref_name }}
           PUSH: ${{ github.event_name != 'workflow_dispatch' || inputs.push }}
         run: |
-          if [ "$CYRUSLIBS" != master ] && [ -z "$SUFFIX" ]; then
-            echo "::error::a tag suffix is required when building against an alternative cyruslibs"
+          if [ -z "$SUFFIX" ] && { [ "$CYRUSLIBS" != master ] || [ "$JMAP_TESTSUITE" != master ]; }; then
+            echo "::error::a tag suffix is required when building with an alternative cyruslibs or JMAP-TestSuite"
             exit 1
           fi
           if [ -n "$SUFFIX" ] && ! [[ "$SUFFIX" =~ ^[A-Za-z0-9_.-]+$ ]]; then
@@ -77,6 +83,7 @@ jobs:
           {
             echo "debians=$debians"
             echo "cyruslibs=$CYRUSLIBS"
+            echo "jmap-testsuite=$JMAP_TESTSUITE"
             echo "tag-tail=$tail"
             echo "push=$PUSH"
           } >> "$GITHUB_OUTPUT"
@@ -138,6 +145,7 @@ jobs:
           build-args: |
             DEBIAN_VERSION=${{ matrix.debian }}
             CYRUSLIBS_BRANCH=${{ needs.plan.outputs.cyruslibs }}
+            JMAP_TESTSUITE_REF=${{ needs.plan.outputs.jmap-testsuite }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: ${{ needs.plan.outputs.push == 'true' && format('type=image,name={0}/{1},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) || 'type=cacheonly' }}
 
@@ -220,6 +228,7 @@ jobs:
           docker buildx imagetools create \
             --annotation "index:org.opencontainers.image.description=Cyrus IMAP development and CI image" \
             --annotation "index:org.cyrusimap.cyrus-docker.cyruslibs=${{ needs.plan.outputs.cyruslibs }}" \
+            --annotation "index:org.cyrusimap.cyrus-docker.jmap-testsuite=${{ needs.plan.outputs.jmap-testsuite }}" \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
