@@ -281,13 +281,28 @@ $CPANM \
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
 
+# This determines what ref (branch, tag, or commit) of JMAP-TestSuite we
+# install.
+ARG JMAP_TESTSUITE_REF=master
+
+# Alternative images are published under a human-chosen tag suffix (see
+# publish-image.yml), so record the head chosen here.
+LABEL org.cyrusimap.cyrus-docker.jmap-testsuite=$JMAP_TESTSUITE_REF
+
 RUN <<EOF
 # clone and prep JMAP Test Suite
 #
 # Again, just needed so we can run the tests.
+#
+# This is fetched the way Dovecot is, below, rather than with "git clone -b",
+# because clone only takes a branch or tag and we expect to pin commits here.
 set -e
-git clone --depth 1 --shallow-submodules https://github.com/fastmail/JMAP-TestSuite.git
+mkdir JMAP-TestSuite
 cd JMAP-TestSuite
+git init
+git remote add github https://github.com/fastmail/JMAP-TestSuite.git
+git fetch --depth 1 github $JMAP_TESTSUITE_REF
+git checkout FETCH_HEAD
 $CPANM --installdeps .
 $CLEANUP && rm -rf ~/.cpanm || true
 EOF
