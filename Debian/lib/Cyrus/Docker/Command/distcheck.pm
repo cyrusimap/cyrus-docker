@@ -79,13 +79,16 @@ sub execute ($self, $opt, $args) {
 
   my $dirty = $opt->dirty ? '-dirty' : '';
 
-  my ($tarball) = glob("cyrus-imapd-*-g${commit}*${dirty}.tar.gz");
+  my $glob = "cyrus-imapd-*-g${commit}*${dirty}.tar.gz";
+  my ($tarball) = glob($glob);
 
   unless ($tarball) {
-    die <<~'END'
+    die <<~"END"
     Can't find the tarball we should've just built!  This often means that you
     had a stale configure result, and built for the configured version, not the
     version that tools/git-version.sh would now produce.
+
+    Expected to find something matching "$glob".
 
     END
   }
