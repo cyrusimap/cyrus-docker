@@ -275,6 +275,7 @@ $CPANM \
   Mail::IMAPTalk \
   Net::CalDAVTalk~0.14 \
   Net::CardDAVTalk~0.11 \
+  Package::Stash::XS~0.32 \
   Process::Status \
   Test::Unit~0.29 \
   Test::Deep::Hashbag
