@@ -140,10 +140,9 @@ sub execute ($self, $opt, $args) {
   }
 
   run(qw( sudo make install             ), @jobs);
-  run(qw( sudo make install-binsymlinks ), @jobs);
   run(qw( sudo cp tools/mkimap /usr/cyrus/bin/mkimap ));
 
-  system('/usr/cyrus/bin/cyr_info', 'version');
+  system('/usr/cyrus/sbin/cyr_info', 'version');
 }
 
 sub configure ($self, $opt) {
