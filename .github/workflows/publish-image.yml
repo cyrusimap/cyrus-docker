@@ -42,7 +42,9 @@ jobs:
     outputs:
       debians: ${{ steps.plan.outputs.debians }}
       cyruslibs: ${{ steps.plan.outputs.cyruslibs }}
+      cyruslibs-commit: ${{ steps.plan.outputs.cyruslibs-commit }}
       jmap-testsuite: ${{ steps.plan.outputs.jmap-testsuite }}
+      jmap-testsuite-commit: ${{ steps.plan.outputs.jmap-testsuite-commit }}
       tag-tail: ${{ steps.plan.outputs.tag-tail }}
       push: ${{ steps.plan.outputs.push }}
     steps:
@@ -80,10 +82,31 @@ jobs:
             all) debians='["bookworm","trixie"]' ;;
             *)   debians="[\"$DEBIAN\"]" ;;
           esac
+
+          # The image build caches layers between runs, so it must be told the
+          # commit to build, not just the branch name: if the branch moves but
+          # the build arguments don't, the build will reuse the old layers.
+          # Refs that aren't found here (like a commit id) are passed along
+          # as-is, and the build's own fetch will deal with them.
+          resolve() {
+            local url=$1 ref=$2 refs sha
+            refs=$(git ls-remote "$url" "refs/heads/$ref" "refs/tags/$ref" "refs/tags/$ref^{}") \
+              || { echo "::error::couldn't list refs in $url" >&2; exit 1; }
+            sha=$(awk -v want="refs/tags/$ref^{}" '$2 == want { print $1 }' <<< "$refs")
+            [ -n "$sha" ] || sha=$(awk 'NR == 1 { print $1 }' <<< "$refs")
+            echo "${sha:-$ref}"
+          }
+          cyruslibs_commit=$(resolve https://github.com/cyrusimap/cyruslibs.git "$CYRUSLIBS")
+          jmap_testsuite_commit=$(resolve https://github.com/fastmail/JMAP-TestSuite.git "$JMAP_TESTSUITE")
+          echo "cyruslibs $CYRUSLIBS is $cyruslibs_commit"
+          echo "JMAP-TestSuite $JMAP_TESTSUITE is $jmap_testsuite_commit"
+
           {
             echo "debians=$debians"
             echo "cyruslibs=$CYRUSLIBS"
+            echo "cyruslibs-commit=$cyruslibs_commit"
             echo "jmap-testsuite=$JMAP_TESTSUITE"
+            echo "jmap-testsuite-commit=$jmap_testsuite_commit"
             echo "tag-tail=$tail"
             echo "push=$PUSH"
           } >> "$GITHUB_OUTPUT"
@@ -145,7 +168,9 @@ jobs:
           build-args: |
             DEBIAN_VERSION=${{ matrix.debian }}
             CYRUSLIBS_BRANCH=${{ needs.plan.outputs.cyruslibs }}
+            CYRUSLIBS_COMMIT=${{ needs.plan.outputs.cyruslibs-commit }}
             JMAP_TESTSUITE_REF=${{ needs.plan.outputs.jmap-testsuite }}
+            JMAP_TESTSUITE_COMMIT=${{ needs.plan.outputs.jmap-testsuite-commit }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: ${{ needs.plan.outputs.push == 'true' && format('type=image,name={0}/{1},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) || 'type=cacheonly' }}
 
@@ -228,7 +253,9 @@ jobs:
           docker buildx imagetools create \
             --annotation "index:org.opencontainers.image.description=Cyrus IMAP development and CI image" \
             --annotation "index:org.cyrusimap.cyrus-docker.cyruslibs=${{ needs.plan.outputs.cyruslibs }}" \
+            --annotation "index:org.cyrusimap.cyrus-docker.cyruslibs-commit=${{ needs.plan.outputs.cyruslibs-commit }}" \
             --annotation "index:org.cyrusimap.cyrus-docker.jmap-testsuite=${{ needs.plan.outputs.jmap-testsuite }}" \
+            --annotation "index:org.cyrusimap.cyrus-docker.jmap-testsuite-commit=${{ needs.plan.outputs.jmap-testsuite-commit }}" \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 

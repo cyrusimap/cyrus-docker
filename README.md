@@ -58,8 +58,9 @@ in:
 That publishes `trixie-libs68` (and `bookworm-libs68`, with `all`).  Run from
 a branch other than `master`, the branch name goes between, as in
 `trixie-dev-libs68`.  The suffix is yours to choose, so check the
-`org.cyrusimap.cyrus-docker.cyruslibs` and `.jmap-testsuite` labels if you
-need to know what an image was really built from.
+`org.cyrusimap.cyrus-docker.cyruslibs` and `.jmap-testsuite` labels, and the
+`-commit` labels next to them, if you need to know what an image was really
+built from.
 
 These images are not rebuilt nightly.  They stay as built until someone runs
 the workflow again with the same suffix, or deletes them.

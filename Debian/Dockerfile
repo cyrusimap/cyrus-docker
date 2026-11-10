@@ -300,6 +300,11 @@ ARG CLEANUP=true
 # This determines what branch (head or tag) we use to build cyruslibs.
 ARG CYRUSLIBS_BRANCH=master
 
+# If set, this is the commit to build, and CYRUSLIBS_BRANCH is only a label.
+# The CI workflow resolves the branch to a commit and passes both, so that a new
+# commit on the branch changes this step's cache key and gets built.
+ARG CYRUSLIBS_COMMIT
+
 RUN <<EOF
 # clone and build cyruslibs
 #
@@ -316,7 +321,7 @@ mkdir cyruslibs
 cd cyruslibs
 git init
 git remote add github https://github.com/cyrusimap/cyruslibs.git
-git fetch --depth 1 github $CYRUSLIBS_BRANCH
+git fetch --depth 1 github ${CYRUSLIBS_COMMIT:-$CYRUSLIBS_BRANCH}
 git checkout FETCH_HEAD
 git submodule update --init --depth 1 --jobs 4
 ./build.sh
@@ -399,9 +404,14 @@ EOF
 # install.
 ARG JMAP_TESTSUITE_REF=master
 
+# If set, this is the commit to install, and JMAP_TESTSUITE_REF is only a label.
+# See CYRUSLIBS_COMMIT, above.
+ARG JMAP_TESTSUITE_COMMIT
+
 # Alternative images are published under a human-chosen tag suffix (see
 # publish-image.yml), so record the head chosen here.
 LABEL org.cyrusimap.cyrus-docker.jmap-testsuite=$JMAP_TESTSUITE_REF
+LABEL org.cyrusimap.cyrus-docker.jmap-testsuite-commit=$JMAP_TESTSUITE_COMMIT
 
 RUN <<EOF
 # clone and prep JMAP Test Suite
@@ -415,7 +425,7 @@ mkdir JMAP-TestSuite
 cd JMAP-TestSuite
 git init
 git remote add github https://github.com/fastmail/JMAP-TestSuite.git
-git fetch --depth 1 github $JMAP_TESTSUITE_REF
+git fetch --depth 1 github ${JMAP_TESTSUITE_COMMIT:-$JMAP_TESTSUITE_REF}
 git checkout FETCH_HEAD
 $CPANM --installdeps .
 $CLEANUP && rm -rf ~/.cpanm || true
@@ -441,10 +451,12 @@ COPY --from=dovecot /usr/local/ /usr/local/
 COPY --from=dovecot /srv/imaptest /srv/imaptest
 
 ARG CYRUSLIBS_BRANCH=master
+ARG CYRUSLIBS_COMMIT
 
 # Alternative images are published under a human-chosen tag suffix (see
 # publish-image.yml), so record the head chosen here.
 LABEL org.cyrusimap.cyrus-docker.cyruslibs=$CYRUSLIBS_BRANCH
+LABEL org.cyrusimap.cyrus-docker.cyruslibs-commit=$CYRUSLIBS_COMMIT
 
 COPY --from=cyruslibs /usr/local/cyruslibs /usr/local/cyruslibs
 
