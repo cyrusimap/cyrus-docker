@@ -58,14 +58,22 @@ in:
 That publishes `trixie-libs68` (and `bookworm-libs68`, with `all`).  Run from
 a branch other than `master`, the branch name goes between, as in
 `trixie-dev-libs68`.  The suffix is yours to choose, so check the
-`org.cyrusimap.cyrus-docker.cyruslibs` and `.jmap-testsuite` labels if you
-need to know what an image was really built from.
+`org.cyrusimap.cyrus-docker.cyruslibs` and `.jmap-testsuite` labels, and the
+`-commit` labels next to them, if you need to know what an image was really
+built from.
 
 These images are not rebuilt nightly.  They stay as built until someone runs
 the workflow again with the same suffix, or deletes them.
 
 Turn off **push** to check that an image builds without publishing anything.
 
+### Build cache
+
+The workflow keeps a layer cache in GHCR, under tags like
+`buildcache-trixie-amd`.  These are not images you can run!  They let the
+nightly build skip rebuilding Dovecot and cyruslibs unless something they
+depend on has changed.  Deleting them is harmless, but makes the next build
+slow.
 
 ## Running the Docker instance
 

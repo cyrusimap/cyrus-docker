@@ -11,15 +11,19 @@
 # "what do I need?".  It's Debian-based, so you'll have to translate package
 # names to your own system, but nothing required should be hidden elsewhere.
 #
-# The build proceeds in stages:
+# The build proceeds in steps:
 #
 #   1. install Debian packages: the C build toolchain, the libraries Cyrus
-#      links against, and the Perl modules Cassandane needs
-#   2. create the "cyrus" user/group and minimal system config
-#   3. fetch and build the external test tools we pin to known-good commits
-#      (CalDAVTester, Dovecot, imaptest, JMAP-TestSuite)
-#   4. build cyruslibs: libraries at versions newer than Debian ships
-#   5. install "cyd", the in-container tooling, under /srv/bin
+#      links against, and the Perl modules Cassandane needs (the "base" stage)
+#   2. build the things we compile from source, each in its own stage:
+#      Dovecot and imaptest, pinned to known-good commits, and cyruslibs,
+#      libraries at versions newer than Debian ships
+#   3. starting again from "base", apply Debian updates, then create the
+#      "cyrus" user/group and minimal system config
+#   4. fetch the other external test tools (CalDAVTester, JMAP-TestSuite) and
+#      Perl prereqs from CPAN
+#   5. copy in what the builder stages built
+#   6. install "cyd", the in-container tooling, under /srv/bin
 #
 # Note that the build/test/coverage *steps* themselves live in cyd, not here.
 # If you want to know exactly how Cyrus is configured, built, and tested, then
@@ -30,7 +34,7 @@
 # If you change the default source image, update the README, which references
 # the underlying Debian version.
 ARG DEBIAN_VERSION=bookworm
-FROM debian:$DEBIAN_VERSION
+FROM debian:$DEBIAN_VERSION AS base
 LABEL org.opencontainers.image.authors="Cyrus IMAP <docker@role.fastmailteam.com>"
 LABEL org.cyrusimap.cyrus-docker.version="1.0"
 
@@ -217,6 +221,137 @@ update-alternatives --install /usr/bin/clang-tidy   clang-tidy   /usr/bin/clang-
 update-alternatives --install /usr/bin/clangd       clangd       /usr/bin/clangd-${LLVM_VERSION}       100
 EOF
 
+WORKDIR /srv
+
+# =============================================================================
+# builder stages
+#
+# Dovecot (for imaptest) and cyruslibs are the slow parts of this build.  Each
+# is built in its own stage, starting from "base" above, and only its installed
+# results are copied into the final image.  This means BuildKit can build them
+# at the same time, and that each one's layer cache depends only on "base" and
+# the commit being built.  When the nightly build only needs to refresh Debian
+# packages or the Perl prereqs, neither one is rebuilt.
+#
+# The builder stages delete their source and build trees when done, which keeps
+# them out of the layer cache.  If you want to poke at a build tree (say, to
+# look at cyruslibs' config.log), build just that stage, keeping its trees,
+# with "docker build --target cyruslibs --build-arg CLEANUP=false".
+# =============================================================================
+
+FROM base AS dovecot
+
+# Set it to "false" to leave the checkout and build artifacts in place.
+ARG CLEANUP=true
+
+# This determines what commit (sha1) we use to build Dovecot.  We don't have
+# much of a policy about testing or changing this, but: before making changes
+# to the Dockerfile or the built image, make sure they don't break things!
+ARG DOVECOT_COMMIT=16c850b8d7fa781099315b6a7cc68e6fb5cdeb20
+ARG IMAPTEST_COMMIT=0c24edb324f10a08223097b5cda145fa005c4026
+
+RUN <<EOF
+# clone and build dovecot.git
+#
+# This is because we want Dovecot's "imaptest" program for doing testing of our
+# IMAP implementation, and it wants Dovecot.
+#
+# This step is weird.  We want a specific commit, just for the sake of pinning
+# to known-good.  We install so that imaptest (below) can rely on the installed
+# Dovecot even after we remove the source.  The final image copies the installed
+# Dovecot out of /usr/local, but not the source, which is a whole lot of bytes
+# that we don't really need to ship in the OCI image.
+set -e
+mkdir dovecot
+cd dovecot
+git init
+git remote add github https://github.com/dovecot/core.git
+git fetch --depth 1 github $DOVECOT_COMMIT
+git checkout FETCH_HEAD
+./autogen.sh
+./configure --enable-silent-rules
+make -j $(nproc)
+make install
+cd ..
+$CLEANUP && rm -rf dovecot || true
+EOF
+
+RUN <<EOF
+# clone and build imaptest.git
+set -e
+mkdir imaptest
+cd imaptest
+git init
+git remote add github https://github.com/dovecot/imaptest.git
+git fetch --depth 1 github $IMAPTEST_COMMIT
+git checkout FETCH_HEAD
+./autogen.sh
+./configure --enable-silent-rules
+make -j $(nproc)
+# need to run it once as root to link up libs
+./src/imaptest || true
+EOF
+
+FROM base AS cyruslibs
+
+# Set it to "false" to leave the checkout and build artifacts in place.
+ARG CLEANUP=true
+
+# This determines what branch (head or tag) we use to build cyruslibs.
+ARG CYRUSLIBS_BRANCH=master
+
+# If set, this is the commit to build, and CYRUSLIBS_BRANCH is only a label.
+# The CI workflow resolves the branch to a commit and passes both, so that a new
+# commit on the branch changes this step's cache key and gets built.
+ARG CYRUSLIBS_COMMIT
+
+RUN <<EOF
+# clone and build cyruslibs
+#
+# cyruslibs bundles libraries -- most importantly for Xapian search -- at
+# versions newer than Debian ships.  Cyrus builds against these, installed
+# under /usr/local/cyruslibs.  This is why `cyd build` points configure's
+# CFLAGS/LDFLAGS/PKG_CONFIG_PATH and XAPIAN_CONFIG at that prefix.
+#
+# We fetch the submodules ourselves, shallowly, before build.sh runs.  Its own
+# "git submodule update" then has nothing to do.  Left to itself, it fetches
+# the full history of every submodule, which (mostly for ICU) is a lot.
+set -e
+mkdir cyruslibs
+cd cyruslibs
+git init
+git remote add github https://github.com/cyrusimap/cyruslibs.git
+git fetch --depth 1 github ${CYRUSLIBS_COMMIT:-$CYRUSLIBS_BRANCH}
+git checkout FETCH_HEAD
+git submodule update --init --depth 1 --jobs 4
+./build.sh
+cd ..
+$CLEANUP && rm -rf cyruslibs || true
+EOF
+
+# =============================================================================
+# the final image
+# =============================================================================
+
+FROM base
+
+# The steps from here on are rebuilt whenever this value changes.  CI sets it
+# to the date, so that the nightly image picks up Debian updates and the latest
+# releases of the Perl prereqs, but can reuse the cached "base" layers above and
+# the builder stages.  Local builds leave it empty, so they reuse their cache.
+ARG REFRESH_DATE
+
+RUN <<EOF
+# bring "base" up to date
+#
+# The packages installed in "base" are as old as that layer's cache, so we
+# apply any updates published since then.
+set -e
+echo "refreshing for: ${REFRESH_DATE:-(no date given)}"
+apt-get update
+apt-get -y --with-new-pkgs upgrade
+EOF
+
 RUN <<EOF
 # set up users, groups, and config
 #
@@ -286,23 +421,28 @@ EOF
 # install.
 ARG JMAP_TESTSUITE_REF=master
 
+# If set, this is the commit to install, and JMAP_TESTSUITE_REF is only a label.
+# See CYRUSLIBS_COMMIT, above.
+ARG JMAP_TESTSUITE_COMMIT
+
 # Alternative images are published under a human-chosen tag suffix (see
 # publish-image.yml), so record the head chosen here.
 LABEL org.cyrusimap.cyrus-docker.jmap-testsuite=$JMAP_TESTSUITE_REF
+LABEL org.cyrusimap.cyrus-docker.jmap-testsuite-commit=$JMAP_TESTSUITE_COMMIT
 
 RUN <<EOF
 # clone and prep JMAP Test Suite
 #
 # Again, just needed so we can run the tests.
 #
-# This is fetched the way Dovecot is, below, rather than with "git clone -b",
+# This is fetched the way Dovecot is, above, rather than with "git clone -b",
 # because clone only takes a branch or tag and we expect to pin commits here.
 set -e
 mkdir JMAP-TestSuite
 cd JMAP-TestSuite
 git init
 git remote add github https://github.com/fastmail/JMAP-TestSuite.git
-git fetch --depth 1 github $JMAP_TESTSUITE_REF
+git fetch --depth 1 github ${JMAP_TESTSUITE_COMMIT:-$JMAP_TESTSUITE_REF}
 git checkout FETCH_HEAD
 $CPANM --installdeps .
 $CLEANUP && rm -rf ~/.cpanm || true
@@ -324,75 +464,18 @@ cd ..
 $CLEANUP && rm -rf Mail-IMAPTalk || true
 EOF
 
-# This determines what commit (sha1) we use to build Dovecot.  We don't have
-# much of a policy about testing or changing this, but: before making changes
-# to the Dockerfile or the built image, make sure they don't break things!
-ARG DOVECOT_COMMIT=16c850b8d7fa781099315b6a7cc68e6fb5cdeb20
-ARG IMAPTEST_COMMIT=0c24edb324f10a08223097b5cda145fa005c4026
+COPY --from=dovecot /usr/local/ /usr/local/
+COPY --from=dovecot /srv/imaptest /srv/imaptest
 
-RUN <<EOF
-# clone and build dovecot.git
-#
-# This is because we want Dovecot's "imaptest" program for doing testing of our
-# IMAP implementation, and it wants Dovecot.
-#
-# This step is weird.  We want a specific commit, just for the sake of pinning
-# to known-good.  We install so that imaptest (below) can rely on the installed
-# Dovecot even after we remove the source.  We remove the source because it's a
-# whole lot of bytes that we don't really need to ship in the OCI image.
-set -e
-mkdir dovecot
-cd dovecot
-git init
-git remote add github https://github.com/dovecot/core.git
-git fetch --depth 1 github $DOVECOT_COMMIT
-git checkout FETCH_HEAD
-./autogen.sh
-./configure --enable-silent-rules
-make -j 8
-make install
-cd ..
-$CLEANUP && rm -rf dovecot || true
-EOF
-
-RUN <<EOF
-# clone and build imaptest.git
-set -e
-mkdir imaptest
-cd imaptest
-git init
-git remote add github https://github.com/dovecot/imaptest.git
-git fetch --depth 1 github $IMAPTEST_COMMIT
-git checkout FETCH_HEAD
-./autogen.sh
-./configure --enable-silent-rules
-make -j 8
-# need to run it once as root to link up libs
-./src/imaptest || true
-EOF
-
-# This determines what branch (head or tag) we use to build cyruslibs.
 ARG CYRUSLIBS_BRANCH=master
+ARG CYRUSLIBS_COMMIT
 
 # Alternative images are published under a human-chosen tag suffix (see
 # publish-image.yml), so record the head chosen here.
 LABEL org.cyrusimap.cyrus-docker.cyruslibs=$CYRUSLIBS_BRANCH
+LABEL org.cyrusimap.cyrus-docker.cyruslibs-commit=$CYRUSLIBS_COMMIT
 
-RUN <<EOF
-# clone and build cyruslibs
-#
-# cyruslibs bundles libraries -- most importantly for Xapian search -- at
-# versions newer than Debian ships.  Cyrus builds against these, installed
-# under /usr/local/cyruslibs.  This is why `cyd build` points configure's
-# CFLAGS/LDFLAGS/PKG_CONFIG_PATH and XAPIAN_CONFIG at that prefix.
-set -e
-git clone --depth 1 --shallow-submodules -b $CYRUSLIBS_BRANCH \
-  https://github.com/cyrusimap/cyruslibs.git
-cd cyruslibs
-./build.sh
-cd ..
-$CLEANUP && rm -rf cyruslibs || true
-EOF
+COPY --from=cyruslibs /usr/local/cyruslibs /usr/local/cyruslibs
 
 COPY bin /srv/bin
 COPY lib /srv/lib
