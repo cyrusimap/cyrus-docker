@@ -18,8 +18,8 @@
 #   2. build the things we compile from source, each in its own stage:
 #      Dovecot and imaptest, pinned to known-good commits, and cyruslibs,
 #      libraries at versions newer than Debian ships
-#   3. starting again from "base", create the "cyrus" user/group and minimal
-#      system config
+#   3. starting again from "base", apply Debian updates, then create the
+#      "cyrus" user/group and minimal system config
 #   4. fetch the other external test tools (CalDAVTester, JMAP-TestSuite) and
 #      Perl prereqs from CPAN
 #   5. copy in what the builder stages built
@@ -334,6 +334,23 @@ EOF
 # =============================================================================
 
 FROM base
+
+# The steps from here on are rebuilt whenever this value changes.  CI sets it
+# to the date, so that the nightly image picks up Debian updates and the latest
+# releases of the Perl prereqs, but can reuse the cached "base" layers above and
+# the builder stages.  Local builds leave it empty, so they reuse their cache.
+ARG REFRESH_DATE
+
+RUN <<EOF
+# bring "base" up to date
+#
+# The packages installed in "base" are as old as that layer's cache, so we
+# apply any updates published since then.
+set -e
+echo "refreshing for: ${REFRESH_DATE:-(no date given)}"
+apt-get update
+apt-get -y --with-new-pkgs upgrade
+EOF
 
 RUN <<EOF
 # set up users, groups, and config

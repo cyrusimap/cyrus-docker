@@ -45,6 +45,7 @@ jobs:
       cyruslibs-commit: ${{ steps.plan.outputs.cyruslibs-commit }}
       jmap-testsuite: ${{ steps.plan.outputs.jmap-testsuite }}
       jmap-testsuite-commit: ${{ steps.plan.outputs.jmap-testsuite-commit }}
+      refresh-date: ${{ steps.plan.outputs.refresh-date }}
       tag-tail: ${{ steps.plan.outputs.tag-tail }}
       push: ${{ steps.plan.outputs.push }}
     steps:
@@ -107,6 +108,7 @@ jobs:
             echo "cyruslibs-commit=$cyruslibs_commit"
             echo "jmap-testsuite=$JMAP_TESTSUITE"
             echo "jmap-testsuite-commit=$jmap_testsuite_commit"
+            echo "refresh-date=$(date -u +%F)"
             echo "tag-tail=$tail"
             echo "push=$PUSH"
           } >> "$GITHUB_OUTPUT"
@@ -171,6 +173,7 @@ jobs:
             CYRUSLIBS_COMMIT=${{ needs.plan.outputs.cyruslibs-commit }}
             JMAP_TESTSUITE_REF=${{ needs.plan.outputs.jmap-testsuite }}
             JMAP_TESTSUITE_COMMIT=${{ needs.plan.outputs.jmap-testsuite-commit }}
+            REFRESH_DATE=${{ needs.plan.outputs.refresh-date }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: ${{ needs.plan.outputs.push == 'true' && format('type=image,name={0}/{1},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) || 'type=cacheonly' }}
 
