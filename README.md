@@ -67,6 +67,13 @@ the workflow again with the same suffix, or deletes them.
 
 Turn off **push** to check that an image builds without publishing anything.
 
+### Build cache
+
+The workflow keeps a layer cache in GHCR, under tags like
+`buildcache-trixie-amd`.  These are not images you can run!  They let the
+nightly build skip rebuilding Dovecot and cyruslibs unless something they
+depend on has changed.  Deleting them is harmless, but makes the next build
+slow.
 
 ## Running the Docker instance
 

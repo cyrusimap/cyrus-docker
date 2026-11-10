@@ -175,6 +175,17 @@ jobs:
             JMAP_TESTSUITE_COMMIT=${{ needs.plan.outputs.jmap-testsuite-commit }}
             REFRESH_DATE=${{ needs.plan.outputs.refresh-date }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Layers are cached in GHCR, under tags like "buildcache-trixie-amd",
+          # one per image tag and architecture.  The cleanup workflow only
+          # deletes untagged images, so it won't touch these.  Builds of other
+          # branches or alternative images also read the plain Debian cache,
+          # which is where they'll usually find the slow builder stages.
+          #
+          # When not pushing, we haven't logged in and can't write the cache.
+          cache-from: |
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ matrix.debian }}${{ needs.plan.outputs.tag-tail }}-${{ env.ARCH }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-${{ matrix.debian }}-${{ env.ARCH }}
+          cache-to: ${{ needs.plan.outputs.push == 'true' && format('type=registry,ref={0}/{1}:buildcache-{2}{3}-{4},mode=max,image-manifest=true,oci-mediatypes=true', env.REGISTRY, env.IMAGE_NAME, matrix.debian, needs.plan.outputs.tag-tail, env.ARCH) || '' }}
           outputs: ${{ needs.plan.outputs.push == 'true' && format('type=image,name={0}/{1},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) || 'type=cacheonly' }}
 
       - name: Generate artifact attestation
