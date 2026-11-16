@@ -91,6 +91,9 @@ sub execute ($self, $opt, $args) {
     cyrus_branch_legacy('cyrus-imapd-3.8'),
     cyrus_branch_legacy('cyrus-imapd-3.10'),
     cyrus_branch_legacy('cyrus-imapd-3.12', [ '/3.12', '/', '/stable' ]),
+
+    # Soon-to-be stable
+    cyrus_branch('cyrus-imapd-3.14'),
   );
 
   # set up our basedir
