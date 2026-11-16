@@ -65,11 +65,7 @@ sub execute ($self, $opt, $args) {
 
   my @jobs = ("-j", $self->app->job_count($opt->jobs));
 
-  run(qw( make distcheck ), @jobs);
-
-  if ($opt->brief) {
-    return;
-  }
+  run(qw( make dist ), @jobs);
 
   my $commit = `git rev-parse HEAD`;
   Process::Status->assert_ok('checking current commit');
@@ -96,12 +92,26 @@ sub execute ($self, $opt, $args) {
   my $full_tarball_path = File::Spec->catfile($root, $tarball);
 
   my $tempdir = tempdir(CLEANUP => 1);
-  chdir $tempdir or die "can't chdir to $tempdir: $!";
   chmod 0755, $tempdir or die "can't chmod 0755 $tempdir: $!";
 
-  run(qw( tar zxvf ), $full_tarball_path );
+  # We run "make distcheck" from an unpacked copy of the tarball in a
+  # container-local directory, not in $root.  Under Docker on macOS, sometimes
+  # $root is a virtiofs mount, and GNU install copying a sparse file (like the
+  # shared libraries the linker produces) from virtiofs to virtiofs dies trying
+  # to punch holes with fallocate.  "make distcheck" installs under its own
+  # build directory, so it can't be run on the mount.
+  my $check_dir = $self->_unpack_tarball($full_tarball_path, "$tempdir/check");
+  chdir $check_dir or die "can't chdir to $check_dir: $!";
 
-  my $extracted = File::Spec->catfile($tempdir, $tarball =~ s/\.tar\.gz$//r);
+  run(qw( ./configure ));
+  run(qw( make distcheck ), @jobs);
+
+  if ($opt->brief) {
+    chdir $root or die "can't chdir to $root: $!";
+    return;
+  }
+
+  my $extracted = $self->_unpack_tarball($full_tarball_path, "$tempdir/test");
   chdir $extracted or die "can't chdir to $extracted: $!";
 
   local $ENV{CYRUS_CLONE_ROOT} = $extracted;
@@ -116,6 +126,16 @@ sub execute ($self, $opt, $args) {
 
   # chdir back to original root so that tempdir can be cleaned up
   chdir $root or die "can't chdir to $root: $!";
+}
+
+# Unpack $tarball into $dir (which must not exist yet) and return the path to
+# the top-level directory it contained.
+sub _unpack_tarball ($self, $tarball, $dir) {
+  mkdir $dir or die "can't mkdir $dir: $!";
+  run(qw( tar zxf ), $tarball, '-C', $dir);
+
+  my $name = (File::Spec->splitpath($tarball))[2] =~ s/\.tar\.gz\z//r;
+  return File::Spec->catdir($dir, $name);
 }
 
 1;
