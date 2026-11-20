@@ -63,45 +63,54 @@ sub execute ($self, $opt, $args) {
 
   run(qw( ./configure --enable-maintainer-mode ));
 
+  # The version is baked into configure when autoreconf generates it, and
+  # autoreconf won't regenerate it just because HEAD moved.  If it's stale,
+  # we'd build a tarball named for some other commit, so check now.
+  my $version = $self->_configured_version;
+
+  my $want_version = `tools/git-version.sh`;
+  Process::Status->assert_ok('tools/git-version.sh');
+  chomp $want_version;
+
+  unless ($version eq $want_version) {
+    die <<~"ERR";
+    configure was generated for version $version, but tools/git-version.sh
+    says the version is now $want_version.  You probably have a stale
+    configure; try "autoreconf -f -i -s".
+    ERR
+  }
+
   my @jobs = ("-j", $self->app->job_count($opt->jobs));
 
-  run(qw( make distcheck ), @jobs);
+  run(qw( make dist ), @jobs);
 
-  if ($opt->brief) {
-    return;
-  }
-
-  my $commit = `git rev-parse HEAD`;
-  Process::Status->assert_ok('checking current commit');
-
-  chomp $commit;
-  $commit = substr $commit, 0, 6;
-
-  my $dirty = $opt->dirty ? '-dirty' : '';
-
-  my $glob = "cyrus-imapd-*-g${commit}*${dirty}.tar.gz";
-  my ($tarball) = glob($glob);
-
-  unless ($tarball) {
-    die <<~"END"
-    Can't find the tarball we should've just built!  This often means that you
-    had a stale configure result, and built for the configured version, not the
-    version that tools/git-version.sh would now produce.
-
-    Expected to find something matching "$glob".
-
-    END
-  }
+  my $tarball = "cyrus-imapd-$version.tar.gz";
+  die "Can't find $tarball, which we should've just built!\n"
+    unless -e $tarball;
 
   my $full_tarball_path = File::Spec->catfile($root, $tarball);
 
   my $tempdir = tempdir(CLEANUP => 1);
-  chdir $tempdir or die "can't chdir to $tempdir: $!";
   chmod 0755, $tempdir or die "can't chmod 0755 $tempdir: $!";
 
-  run(qw( tar zxvf ), $full_tarball_path );
+  # We run "make distcheck" from an unpacked copy of the tarball in a
+  # container-local directory, not in $root.  Under Docker on macOS, sometimes
+  # $root is a virtiofs mount, and GNU install copying a sparse file (like the
+  # shared libraries the linker produces) from virtiofs to virtiofs dies trying
+  # to punch holes with fallocate.  "make distcheck" installs under its own
+  # build directory, so it can't be run on the mount.
+  my $check_dir = $self->_unpack_tarball($full_tarball_path, "$tempdir/check");
+  chdir $check_dir or die "can't chdir to $check_dir: $!";
 
-  my $extracted = File::Spec->catfile($tempdir, $tarball =~ s/\.tar\.gz$//r);
+  run(qw( ./configure ));
+  run(qw( make distcheck ), @jobs);
+
+  if ($opt->brief) {
+    chdir $root or die "can't chdir to $root: $!";
+    return;
+  }
+
+  my $extracted = $self->_unpack_tarball($full_tarball_path, "$tempdir/test");
   chdir $extracted or die "can't chdir to $extracted: $!";
 
   local $ENV{CYRUS_CLONE_ROOT} = $extracted;
@@ -116,6 +125,27 @@ sub execute ($self, $opt, $args) {
 
   # chdir back to original root so that tempdir can be cleaned up
   chdir $root or die "can't chdir to $root: $!";
+}
+
+# Unpack $tarball into $dir (which must not exist yet) and return the path to
+# the top-level directory it contained.
+sub _unpack_tarball ($self, $tarball, $dir) {
+  mkdir $dir or die "can't mkdir $dir: $!";
+  run(qw( tar zxf ), $tarball, '-C', $dir);
+
+  my $name = (File::Spec->splitpath($tarball))[2] =~ s/\.tar\.gz\z//r;
+  return File::Spec->catdir($dir, $name);
+}
+
+# Return the version the configured Makefile will use to name the dist
+# tarball.
+sub _configured_version ($self) {
+  open my $fh, '<', 'Makefile' or die "can't open Makefile: $!";
+  while (my $line = <$fh>) {
+    return $1 if $line =~ /\AVERSION = (\S+)$/;
+  }
+
+  die "Couldn't find VERSION in Makefile\n";
 }
 
 1;
